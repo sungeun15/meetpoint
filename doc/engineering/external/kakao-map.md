@@ -1,0 +1,660 @@
+# Kakao Map 사용 가이드
+
+## 1\. 문서 목적
+
+이 문서는 2026년 05월 기준 Kakao Developers 공식 가이드를 바탕으로, MeetPoint 프로젝트에서 Kakao Map API와 Kakao Local API를 어떻게 준비하고 연결해야 하는지 처음부터 끝까지 정리한 기준 문서이다.
+
+특히 아래 내용을 한 번에 이해할 수 있도록 작성한다.
+
+1.  Kakao Developers 접속과 개발자 계정 준비
+2.  앱 생성과 팀 멤버 초대
+3.  지도 사용 설정과 키 발급
+4.  웹 도메인 등록
+5.  Next.js 16 프로젝트에 지도 SDK 연결
+6.  서버에서 Kakao Local API로 장소 추천 후보 조회
+7.  자주 나는 오류와 운영 시 주의 사항
+
+## 2\. 이 프로젝트에서 Kakao를 쓰는 방식
+
+MeetPoint에서 Kakao 연동은 두 갈래로 나뉜다.
+
+1.  Kakao Map API
+2.  Kakao Local API
+
+각 역할은 아래처럼 구분한다.
+
+| 구분            | 역할                              | 실행 위치    | 사용하는 키   |
+| --------------- | --------------------------------- | ------------ | ------------- |
+| Kakao Map API   | 지도 렌더링, 마커 표시, 중심 이동 | 브라우저     | JavaScript 키 |
+| Kakao Local API | 중심점 주변 장소 후보 검색        | Next.js 서버 | REST API 키   |
+
+즉, 지도는 브라우저에서 보이고, 장소 검색은 서버에서 처리한다.
+
+이 기준은 프로젝트 문서에서 이미 정한 환경 변수와도 일치한다.
+
+1.  NEXT\_PUBLIC\_KAKAO\_MAP\_APP\_KEY: 브라우저용 JavaScript 키
+2.  KAKAO\_LOCAL\_REST\_API\_KEY: 서버 전용 REST API 키
+
+## 3\. 공식 문서 기준 핵심 요약
+
+2026년 05월 기준 Kakao 공식 문서에서 이 프로젝트와 직접 관련 있는 핵심만 먼저 정리하면 아래와 같다.
+
+1.  카카오맵 API를 쓰려면 앱 생성 후 카카오맵 사용 설정을 ON 해야 한다.
+2.  웹 지도 SDK는 JavaScript 키를 사용해야 하며 REST API 키를 넣으면 안 된다.
+3.  JavaScript 키는 등록된 JavaScript SDK 도메인에서만 동작한다.
+4.  Local REST API는 Authorization 헤더에 `KakaoAK {REST_API_KEY}` 형식으로 요청한다.
+5.  장소 검색은 키워드 검색과 카테고리 검색을 지원하며, 반경 검색은 최대 20000m 범위에서 사용한다.
+6.  지도 SDK를 동적으로 불러올 때는 `autoload=false` 와 `kakao.maps.load()` 조합을 쓰는 방식이 안전하다.
+
+공식 참고 문서:
+
+1.  https://developers.kakao.com/docs/ko/kakaomap/common
+2.  https://developers.kakao.com/docs/ko/local/dev-guide
+3.  https://developers.kakao.com/docs/ko/app-setting/app
+4.  https://apis.map.kakao.com/web/documentation/
+
+## 4\. Kakao Developers 접속부터 시작하기
+
+### 4.1 개발자 계정 준비
+
+순서는 아래와 같다.
+
+1.  https://developers.kakao.com 접속
+2.  카카오계정으로 로그인
+3.  처음이면 개발자 등록 절차 진행
+4.  우측 상단에서 문서와 앱 메뉴 접근 가능 상태인지 확인
+
+실무적으로는 일반 카카오계정만 있는 상태와, Kakao Developers 개발자 등록이 끝난 상태가 다르다.
+
+단순 로그인만 되어 있어도 앱 관리 화면이 바로 안 열릴 수 있으니, 개발자 등록이 완료되었는지 먼저 확인한다.
+
+### 4.2 앱 생성
+
+MeetPoint용 Kakao 앱은 서비스 단위로 1개를 운영하는 것이 기본이다.
+
+공식 문서도 서비스별로 앱을 관리하라고 안내한다. 따라서 기능별로 앱을 여러 개 만드는 방식은 피하는 것이 좋다.
+
+권장 순서:
+
+1.  앱 메뉴에서 앱 생성 선택
+2.  앱 이름 입력: MeetPoint
+3.  회사명 또는 팀명 입력
+4.  카테고리 선택
+5.  저장 후 앱 상세 화면으로 이동
+
+앱이 만들어지면 앱 ID와 여러 종류의 키를 확인할 수 있다.
+
+### 4.3 팀 멤버 추가
+
+이 프로젝트는 팀 작업이므로 앱 오너 혼자만 설정을 들고 있으면 운영이 불안정하다.
+
+멤버 관리 권장 기준:
+
+1.  오너 1명은 반드시 유지
+2.  실제 설정 변경이 필요한 팀원은 Editor 이상 권한 부여
+3.  발표나 문서 확인만 필요한 인원은 Viewer로도 가능
+
+카카오 문서 기준으로 멤버는 앱 정보를 조회하거나 수정할 수 있는 구성원이다. 테스트 앱을 쓰는 경우에도 멤버 등록 여부가 중요하다.
+
+## 5\. 지도 사용 설정과 키 확인
+
+### 5.1 카카오맵 사용 설정
+
+앱을 만들었다고 바로 지도가 되는 것은 아니다.
+
+공식 문서 기준으로 아래 설정이 필요하다.
+
+1.  앱 관리 페이지 진입
+2.  카카오맵 메뉴 진입
+3.  사용 설정 상태를 ON 으로 변경
+
+중요한 점:
+
+1.  신규 앱은 카카오맵 사용 설정이 꺼져 있으면 지도 호출이 실패할 수 있다.
+2.  쿼터가 부족하면 429가 날 수 있다.
+
+### 5.2 어떤 키를 어디에 쓰는가
+
+카카오 앱에는 여러 종류의 키가 있다. MeetPoint에서 실제로 필요한 것은 아래 두 개다.
+
+| 카카오 키     | 우리 프로젝트 변수명               | 사용 위치 | 설명                 |
+| ------------- | ---------------------------------- | --------- | -------------------- |
+| JavaScript 키 | NEXT\_PUBLIC\_KAKAO\_MAP\_APP\_KEY | 브라우저  | 지도 SDK 로드        |
+| REST API 키   | KAKAO\_LOCAL\_REST\_API\_KEY       | 서버      | 장소 검색, 좌표 변환 |
+
+헷갈리면 이렇게 기억하면 된다.
+
+1.  화면에 지도를 띄우는 키는 JavaScript 키
+2.  서버에서 장소를 검색하는 키는 REST API 키
+
+하면 안 되는 실수:
+
+1.  브라우저 코드에 REST API 키 넣기
+2.  지도 SDK URL에 REST API 키 넣기
+3.  JavaScript 키 도메인 등록 없이 바로 테스트하기
+
+## 6\. JavaScript SDK 도메인 등록
+
+### 6.1 왜 도메인 등록이 필요한가
+
+JavaScript 키는 등록된 도메인에서만 허용된다. 공식 문서에도 등록되지 않은 사이트에서 요청하면 거절된다고 안내되어 있다.
+
+그래서 로컬, preview, production 도메인을 모두 미리 정리해 두는 것이 좋다.
+
+### 6.2 MeetPoint 권장 등록값
+
+최소 권장값은 아래와 같다.
+
+1.  http://localhost:3000
+2.  실제 preview 도메인
+3.  실제 production 도메인
+
+주의할 점:
+
+1.  JavaScript SDK 도메인과 제품 링크 웹 도메인은 다른 설정이다.
+2.  이 프로젝트는 현재 지도 연동이 목적이므로 우선 JavaScript SDK 도메인 등록이 핵심이다.
+3.  경로 전체가 아니라 도메인 기준으로 맞춰야 한다.
+
+예시:
+
+1.  `https://meetpoint.vercel.app`
+2.  `https://meetpoint-preview.vercel.app`
+3.  `http://localhost:3000`
+
+## 7\. 환경 변수 연결
+
+이 프로젝트의 기준 환경 변수는 아래 두 개다.
+
+```
+NEXT_PUBLIC_KAKAO_MAP_APP_KEY=your-javascript-key
+KAKAO_LOCAL_REST_API_KEY=your-rest-api-key
+```
+
+규칙은 단순하다.
+
+1.  `NEXT_PUBLIC_` 가 붙은 값은 브라우저에서 읽는다.
+2.  `NEXT_PUBLIC_` 가 없는 값은 서버에서만 읽는다.
+
+즉 Kakao Map SDK는 브라우저에서 실행되므로 `NEXT_PUBLIC_KAKAO_MAP_APP_KEY` 를 사용하고, Kakao Local API는 서버에서만 호출하므로 `KAKAO_LOCAL_REST_API_KEY` 를 사용한다.
+
+## 8\. MeetPoint 기준 구현 구조
+
+프로젝트 기술 설계 문서 기준으로 Kakao 관련 파일 책임은 아래처럼 잡는다.
+
+1.  `lib/kakao/map-loader.ts`: SDK 중복 로드 방지
+2.  `components/main/MapCard.tsx`: 지도와 마커 렌더링
+3.  `lib/kakao/local.ts`: 서버에서 Kakao Local API 호출
+4.  `app/api/recommendations/route.ts`: 추천 API에서 서버 호출 연결
+
+핵심 원칙:
+
+1.  지도 SDK 로딩은 클라이언트에서만 처리
+2.  REST API 키 사용 로직은 서버 파일에서만 처리
+3.  사용자, 친구, 중심점, 추천 장소를 서로 다른 마커로 구분
+4.  selectedFriend 또는 recommendationResult 가 바뀌면 지도 상태 갱신
+
+## 9\. 클라이언트 지도 연동 코드
+
+### 9.1 SDK 로더
+
+Next.js 16에서는 클라이언트 컴포넌트 내부에서 바로 전역 객체를 가정하지 않는 편이 안전하다.
+
+아래처럼 로더를 하나 두고 재사용하는 방식이 가장 깔끔하다.
+
+```
+// lib/kakao/map-loader.ts
+let kakaoMapPromise: Promise<typeof window.kakao> | null = null;
+
+declare global {
+    interface Window {
+        kakao: typeof kakao;
+    }
+}
+
+export async function loadKakaoMapSdk() {
+    if (typeof window === "undefined") {
+        throw new Error("Kakao Map SDK can only be loaded in the browser.");
+    }
+
+    const appKey = process.env.NEXT_PUBLIC_KAKAO_MAP_APP_KEY;
+
+    if (!appKey) {
+        throw new Error("NEXT_PUBLIC_KAKAO_MAP_APP_KEY is missing.");
+    }
+
+    if (window.kakao?.maps) {
+        return window.kakao;
+    }
+
+    if (!kakaoMapPromise) {
+        kakaoMapPromise = new Promise((resolve, reject) => {
+            const existingScript = document.querySelector<HTMLScriptElement>(
+                'script[data-kakao-map-sdk="true"]',
+            );
+
+            const onLoad = () => {
+                window.kakao.maps.load(() => resolve(window.kakao));
+            };
+
+            if (existingScript) {
+                if (window.kakao?.maps) {
+                    resolve(window.kakao);
+                    return;
+                }
+
+                existingScript.addEventListener("load", onLoad, { once: true });
+                existingScript.addEventListener(
+                    "error",
+                    () => reject(new Error("Failed to load Kakao Map SDK.")),
+                    { once: true },
+                );
+                return;
+            }
+
+            const script = document.createElement("script");
+            script.src = `https://dapi.kakao.com/v2/maps/sdk.js?appkey=${appKey}&autoload=false`;
+            script.async = true;
+            script.dataset.kakaoMapSdk = "true";
+            script.addEventListener("load", onLoad, { once: true });
+            script.addEventListener(
+                "error",
+                () => reject(new Error("Failed to load Kakao Map SDK.")),
+                { once: true },
+            );
+            document.head.appendChild(script);
+        });
+    }
+
+    return kakaoMapPromise;
+}
+```
+
+이 코드에서 중요한 점은 두 가지다.
+
+1.  `autoload=false` 와 `kakao.maps.load()` 를 같이 쓴다.
+2.  Promise 를 재사용해서 SDK script 가 여러 번 삽입되지 않게 막는다.
+
+### 9.2 지도 카드 컴포넌트 예시
+
+```
+// components/main/MapCard.tsx
+"use client";
+
+import { useEffect, useRef } from "react";
+import { loadKakaoMapSdk } from "@/lib/kakao/map-loader";
+
+type LocationPoint = {
+    lat: number;
+    lng: number;
+    label: string;
+};
+
+type RecommendationPlace = {
+    id: string;
+    name: string;
+    lat: number;
+    lng: number;
+};
+
+type MapCardProps = {
+    myLocation?: LocationPoint | null;
+    friendLocation?: LocationPoint | null;
+    midpoint?: LocationPoint | null;
+    places?: RecommendationPlace[];
+};
+
+export function MapCard({
+    myLocation,
+    friendLocation,
+    midpoint,
+    places = [],
+}: MapCardProps) {
+    const mapRef = useRef<HTMLDivElement | null>(null);
+    const mapInstanceRef = useRef<kakao.maps.Map | null>(null);
+    const markersRef = useRef<kakao.maps.Marker[]>([]);
+
+    useEffect(() => {
+        let cancelled = false;
+
+        async function initialize() {
+            const kakao = await loadKakaoMapSdk();
+
+            if (cancelled || !mapRef.current) {
+                return;
+            }
+
+            const defaultCenter = new kakao.maps.LatLng(37.5665, 126.978);
+
+            const map =
+                mapInstanceRef.current ??
+                new kakao.maps.Map(mapRef.current, {
+                    center: defaultCenter,
+                    level: 5,
+                });
+
+            mapInstanceRef.current = map;
+
+            markersRef.current.forEach((marker) => marker.setMap(null));
+            markersRef.current = [];
+
+            const bounds = new kakao.maps.LatLngBounds();
+
+            const markerData = [
+                myLocation,
+                friendLocation,
+                midpoint,
+                ...places.map((place) => ({
+                    lat: place.lat,
+                    lng: place.lng,
+                    label: place.name,
+                })),
+            ].filter(Boolean) as LocationPoint[];
+
+            markerData.forEach((point) => {
+                const position = new kakao.maps.LatLng(point.lat, point.lng);
+                const marker = new kakao.maps.Marker({
+                    map,
+                    position,
+                    title: point.label,
+                });
+
+                markersRef.current.push(marker);
+                bounds.extend(position);
+            });
+
+            if (markerData.length > 0) {
+                map.setBounds(bounds, 48, 48, 48, 48);
+            }
+        }
+
+        initialize().catch((error) => {
+            console.error("Failed to initialize Kakao Map", error);
+        });
+
+        return () => {
+            cancelled = true;
+        };
+    }, [myLocation, friendLocation, midpoint, places]);
+
+    return <div ref={mapRef} style={{ width: "100%", height: 420 }} />;
+}
+```
+
+이 컴포넌트는 아래 흐름에 맞다.
+
+1.  선택된 친구가 없으면 내 위치만 보일 수 있다.
+2.  친구 위치가 있으면 사용자와 친구 위치를 같이 보여 준다.
+3.  중심점이 계산되면 중심점 마커를 추가한다.
+4.  추천 장소 결과가 오면 추천 장소 마커까지 같이 표시한다.
+
+## 10\. 서버에서 Kakao Local API 호출하기
+
+### 10.1 왜 서버에서 호출해야 하는가
+
+Kakao Local API는 REST API 키를 사용한다. 이 키는 서버 전용으로 다뤄야 한다.
+
+브라우저에서 직접 호출하면 안 되는 이유:
+
+1.  REST API 키가 노출된다.
+2.  요청 정책과 보안 통제가 어려워진다.
+3.  추천 로직과 에러 처리 기준을 서버에서 통일하기 어렵다.
+
+### 10.2 MeetPoint 추천 기준
+
+프로젝트 설계 문서 기준 추천 후보 조회 기본값은 아래와 같다.
+
+1.  중심점 기준 검색
+2.  반경 2000m
+3.  최대 15개 후보
+4.  카페와 음식점 우선
+5.  운영 환경에서는 임시 fixture fallback 사용 안 함
+
+공식 카테고리 코드 기준으로는 아래 조합이 자연스럽다.
+
+1.  `CE7`: 카페
+2.  `FD6`: 음식점
+
+### 10.3 서버 라이브러리 예시
+
+```
+// lib/kakao/local.ts
+const KAKAO_LOCAL_API_BASE = "https://dapi.kakao.com/v2/local/search/category.json";
+
+type CategoryCode = "CE7" | "FD6";
+
+export type KakaoPlaceCandidate = {
+    id: string;
+    name: string;
+    category: string;
+    address: string;
+    roadAddress: string;
+    lat: number;
+    lng: number;
+    distance: number | null;
+    placeUrl: string;
+};
+
+export async function fetchPlaceCandidates(params: {
+    lat: number;
+    lng: number;
+    radius?: number;
+    size?: number;
+    categories?: CategoryCode[];
+}) {
+    const restApiKey = process.env.KAKAO_LOCAL_REST_API_KEY;
+
+    if (!restApiKey) {
+        throw new Error("KAKAO_LOCAL_REST_API_KEY is missing.");
+    }
+
+    const radius = params.radius ?? 2000;
+    const size = params.size ?? 15;
+    const categories = params.categories ?? ["CE7", "FD6"];
+
+    const responses = await Promise.all(
+        categories.map(async (category) => {
+            const searchParams = new URLSearchParams({
+                category_group_code: category,
+                x: String(params.lng),
+                y: String(params.lat),
+                radius: String(radius),
+                size: String(size),
+                sort: "distance",
+            });
+
+            const response = await fetch(`${KAKAO_LOCAL_API_BASE}?${searchParams.toString()}`, {
+                headers: {
+                    Authorization: `KakaoAK ${restApiKey}`,
+                },
+                cache: "no-store",
+            });
+
+            if (!response.ok) {
+                throw new Error(`Kakao Local API failed with status ${response.status}`);
+            }
+
+            const payload = await response.json();
+            return payload.documents ?? [];
+        }),
+    );
+
+    return responses
+        .flat()
+        .map((item) => ({
+            id: item.id,
+            name: item.place_name,
+            category: item.category_name,
+            address: item.address_name,
+            roadAddress: item.road_address_name,
+            lat: Number(item.y),
+            lng: Number(item.x),
+            distance: item.distance ? Number(item.distance) : null,
+            placeUrl: item.place_url,
+        }))
+        .sort((left, right) => {
+            const leftDistance = left.distance ?? Number.MAX_SAFE_INTEGER;
+            const rightDistance = right.distance ?? Number.MAX_SAFE_INTEGER;
+            return leftDistance - rightDistance;
+        });
+}
+```
+
+이 코드는 공식 REST API 형식에 맞는다.
+
+1.  엔드포인트는 category search 사용
+2.  Authorization 헤더는 `KakaoAK {REST_API_KEY}` 형식 사용
+3.  x 는 경도, y 는 위도
+4.  radius 는 최대 20000m 범위 사용
+5.  sort 를 `distance` 로 두면 중심점 근처 후보를 우선 정렬 가능
+
+### 10.4 Route Handler 예시
+
+```
+// app/api/recommendations/route.ts
+import { NextRequest, NextResponse } from "next/server";
+import { fetchPlaceCandidates } from "@/lib/kakao/local";
+
+export async function POST(request: NextRequest) {
+    try {
+        const body = await request.json();
+        const { midpoint } = body;
+
+        if (!midpoint?.lat || !midpoint?.lng) {
+            return NextResponse.json(
+                { error: { code: "INVALID_INPUT", message: "midpoint is required" } },
+                { status: 400 },
+            );
+        }
+
+        const places = await fetchPlaceCandidates({
+            lat: midpoint.lat,
+            lng: midpoint.lng,
+            radius: 2000,
+            size: 15,
+        });
+
+        return NextResponse.json({ places });
+    } catch (error) {
+        console.error("Failed to fetch Kakao recommendations", error);
+
+        return NextResponse.json(
+            {
+                error: {
+                    code: "KAKAO_API_FAILED",
+                    message: "장소 정보를 가져오지 못했습니다.",
+                },
+            },
+            { status: 502 },
+        );
+    }
+}
+```
+
+## 11\. 지도와 추천 결과를 연결하는 기준
+
+지도는 단순 배경이 아니라 추천 흐름과 연결되어야 한다.
+
+MeetPoint 기준으로 지도 반응은 아래처럼 정리한다.
+
+1.  첫 진입: 기본 중심 좌표 또는 내 위치 표시
+2.  친구 선택: 내 위치와 친구 위치 동시 표시
+3.  중심점 계산 완료: 중심점 마커 추가
+4.  추천 결과 도착: 추천 장소 마커 추가
+5.  추천 목록에서 특정 장소 선택: 해당 장소 중심으로 부드럽게 이동
+
+권장 구현 포인트:
+
+1.  마커가 0개면 기본 중심 좌표 유지
+2.  마커가 1개면 `setCenter()` 사용
+3.  마커가 2개 이상이면 `setBounds()` 사용
+4.  사이드 패널 토글 등으로 지도 영역 크기가 바뀌면 `relayout()` 호출 고려
+
+## 12\. 자주 발생하는 문제와 해결 방법
+
+### 12.1 지도가 아예 안 뜨는 경우
+
+먼저 아래를 확인한다.
+
+1.  `NEXT_PUBLIC_KAKAO_MAP_APP_KEY` 값 존재 여부
+2.  JavaScript 키를 넣었는지 여부
+3.  카카오맵 사용 설정 ON 여부
+4.  등록한 JavaScript SDK 도메인과 실제 접속 도메인이 일치하는지 여부
+
+가장 흔한 원인은 도메인 미등록 또는 잘못된 키 사용이다.
+
+### 12.2 도메인 등록 오류
+
+공식 문서 기준으로 플랫폼 키 등록 정보가 실제 서비스와 다르면 `invalid android_key_hash or ios_bundle_id or web_site_url` 계열 오류가 날 수 있다.
+
+웹 프로젝트에서는 사실상 아래를 먼저 의심하면 된다.
+
+1.  localhost 누락
+2.  preview 도메인 누락
+3.  production 도메인 누락
+4.  잘못된 서브도메인 등록
+
+### 12.3 REST API 호출 실패
+
+아래 순서대로 본다.
+
+1.  `KAKAO_LOCAL_REST_API_KEY` 존재 여부
+2.  Authorization 헤더가 `KakaoAK {키값}` 형식인지 확인
+3.  x 와 y 자리가 바뀌지 않았는지 확인
+4.  반경이 20000 초과인지 확인
+5.  서버에서 호출하고 있는지 확인
+
+### 12.4 429 Too Many Request
+
+공식 FAQ 기준으로 무료 쿼터를 초과하면 429가 발생할 수 있다.
+
+대응 방식:
+
+1.  앱 통계에서 쿼터 사용량 확인
+2.  불필요한 재호출 제거
+3.  지도 이동 이벤트마다 바로 검색하지 않기
+4.  필요한 경우 유료 API 설정 검토
+
+### 12.5 Vercel 배포 후 지도는 뜨는데 추천이 안 되는 경우
+
+이 경우는 대부분 서버 환경 변수 문제다.
+
+확인 항목:
+
+1.  `KAKAO_LOCAL_REST_API_KEY` 가 Preview 또는 Production 에 등록됐는지
+2.  Route Handler 가 실제로 해당 키를 읽는지
+3.  서버 로그에 401, 403, 429, 500 이 있는지
+
+## 13\. 운영 시 주의 사항
+
+1.  JavaScript 키는 공개 가능한 값이지만 등록 도메인으로 보호해야 한다.
+2.  REST API 키는 브라우저에 절대 노출하지 않는다.
+3.  서버 로그에 REST API 키가 그대로 출력되지 않게 한다.
+4.  카카오맵 기능 설정, 키 복제, 대표 키 변경은 운영 영향이 있을 수 있으니 무심코 바꾸지 않는다.
+5.  운영 중 키 교체가 필요하면 복제 키 생성 후 순차 전환하는 방식이 안전하다.
+6.  호출 허용 IP 기능은 고정 egress 환경이 아니면 신중하게 사용한다.
+
+## 14\. MeetPoint 체크리스트
+
+마지막으로 이 프로젝트 기준 실제 체크 순서를 정리하면 아래와 같다.
+
+1.  Kakao Developers 로그인 완료
+2.  MeetPoint 앱 생성 완료
+3.  팀 멤버 추가 완료
+4.  카카오맵 사용 설정 ON 완료
+5.  JavaScript 키와 REST API 키 확인 완료
+6.  JavaScript SDK 도메인에 localhost, preview, production 등록 완료
+7.  `.env.local` 에 두 키 연결 완료
+8.  브라우저에서 지도 렌더링 확인 완료
+9.  서버에서 추천 API 호출 확인 완료
+10.  Vercel Preview 와 Production 환경 변수 등록 완료
+
+## 15\. 운영 메모
+
+1.  환경 변수 이름이 바뀌면 `engineering/config/env.md` 와 같이 수정한다.
+2.  배포 절차가 바뀌면 `engineering/deployment/vercel.md` 와 같이 수정한다.
+3.  추천 로직의 반경, 카테고리, 후보 수가 바뀌면 이 문서와 PRD의 Kakao 연동 설계를 같이 갱신한다.
+4.  공식 가이드가 바뀌면 최소 아래 네 항목부터 다시 확인한다.
+5.  카카오맵 사용 설정 방식
+6.  JavaScript SDK 도메인 규칙
+7.  Local REST API 인증 방식
+8.  쿼터와 유료 API 정책
