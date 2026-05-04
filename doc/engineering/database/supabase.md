@@ -1,0 +1,807 @@
+# Supabase 가이드
+
+## 1\. 문서 목적
+
+이 문서는 MeetPoint에서 Supabase를 어떻게 준비하고 사용하는지 처음부터 끝까지 정리한 기준 문서이다.
+
+특히 이번 문서는 아래 4가지를 한 번에 이해할 수 있도록 작성한다.
+
+1.  GitHub 계정으로 Supabase에 가입하는 방법
+2.  Supabase 프로젝트를 만들고 기본 설정을 확인하는 방법
+3.  MeetPoint에서 필요한 환경 변수와 DB 준비 방법
+4.  Next.js 16 프로젝트에서 Supabase를 어떤 방식으로 연결해야 하는지
+
+중요한 점은 하나이다.
+
+이 문서에서 말하는 GitHub 가입은 Supabase 대시보드 계정을 GitHub로 만드는 절차이다.
+
+즉, MeetPoint 사용자가 GitHub로 로그인하는 기능을 붙이는 문서가 아니다.
+
+현재 MeetPoint MVP의 사용자 로그인은 Supabase Auth가 아니라 JWT + httpOnly 쿠키 방식으로 처리한다.
+
+---
+
+## 2\. MeetPoint에서 Supabase를 쓰는 방식
+
+MeetPoint에서 Supabase는 사용자, 친구, 메시지, 위치 데이터를 저장하는 데이터베이스 역할을 맡는다.
+
+아주 짧게 정리하면 아래 구조이다.
+
+1.  브라우저는 화면과 입력만 담당한다.
+2.  Next.js 서버가 요청을 받는다.
+3.  서버가 Supabase에 접근해서 데이터를 읽거나 저장한다.
+4.  결과를 다시 브라우저에 돌려준다.
+
+이 프로젝트에서 꼭 기억해야 할 기준은 아래와 같다.
+
+1.  브라우저는 Supabase에 직접 쓰기 요청을 보내지 않는다.
+2.  모든 DB 접근은 Next.js Route Handler를 통해 처리한다.
+3.  서버 전용 DB 접근에는 SUPABASE\_SERVICE\_ROLE\_KEY를 사용한다.
+4.  MVP에서는 Supabase Auth를 로그인 수단으로 사용하지 않는다.
+
+즉, Supabase는 로그인 서비스가 아니라 데이터 저장소로 사용한다고 이해하면 된다.
+
+---
+
+## 3\. 먼저 알아둘 개념
+
+Supabase를 처음 쓰면 아래 세 가지가 헷갈리기 쉽다.
+
+### 3.1 Supabase 계정
+
+Supabase 사이트와 대시보드에 로그인하기 위한 계정이다.
+
+이번 문서에서는 이 계정을 GitHub로 만든다.
+
+### 3.2 Supabase 프로젝트
+
+실제 데이터베이스가 들어 있는 작업 공간이다.
+
+프로젝트를 만들면 아래 값들이 생긴다.
+
+1.  프로젝트 URL
+2.  anon key
+3.  service role key
+4.  SQL Editor
+5.  Table Editor
+
+### 3.3 MeetPoint 앱 로그인
+
+이것은 Supabase 계정 로그인과 전혀 다르다.
+
+MeetPoint 앱 로그인은 별도로 구현하는 앱 기능이고, 현재 기준은 JWT 인증이다.
+
+---
+
+## 4\. GitHub로 Supabase 가입하기
+
+2026년 05월 기준 Supabase 대시보드는 GitHub 계정으로 바로 시작할 수 있다.
+
+기본 순서는 아래와 같다.
+
+1.  https://supabase.com/dashboard 접속
+2.  Continue with GitHub 선택
+3.  GitHub 인증 화면에서 권한 승인
+4.  처음 로그인이라면 Supabase 계정 생성 완료
+5.  Dashboard 진입 확인
+
+처음 사용할 때는 아래처럼 이해하면 쉽다.
+
+1.  Supabase 사이트 회원가입을 GitHub 계정으로 대신 처리한다.
+2.  별도 이메일 회원가입을 만들지 않아도 된다.
+3.  이후에도 같은 GitHub 계정으로 계속 로그인하면 된다.
+
+실무적으로는 팀 공용 DB를 다룰 가능성이 있으므로, 개인 GitHub 계정으로 가입하되 팀에서 누가 어떤 프로젝트 오너인지 미리 정해 두는 편이 안전하다.
+
+---
+
+## 5\. Supabase 프로젝트 만들기
+
+GitHub로 대시보드에 들어갔다면 다음은 프로젝트 생성이다.
+
+### 5.1 기본 생성 순서
+
+1.  New project 선택
+2.  Organization 선택
+3.  Project name 입력
+4.  Database password 설정
+5.  Region 선택
+6.  Create new project 실행
+
+MeetPoint에서는 프로젝트 이름을 아래처럼 단순하게 맞추는 것이 좋다.
+
+1.  meetpoint
+2.  meetpoint-dev
+3.  meetpoint-preview
+
+MVP 단계에서는 우선 1개 프로젝트로 시작해도 되지만, 추후 preview 분리가 필요하면 별도 프로젝트를 둘 수 있다.
+
+### 5.2 프로젝트 생성 화면 항목별 설명
+
+Supabase에서 New project를 누르면 첨부한 화면처럼 아래 입력칸과 체크 항목이 나온다.
+
+초보자 기준으로는 각 항목을 아래처럼 이해하면 된다.
+
+#### Organization
+
+이 프로젝트를 어느 계정 또는 어느 팀 조직 아래에 만들지 고르는 항목이다.
+
+MeetPoint 기준으로는 아래처럼 정하면 된다.
+
+1.  개인 실습이면 본인 GitHub로 만든 Supabase Organization 선택
+2.  팀 공용 DB로 운영할 계획이면 팀에서 합의한 Organization 선택
+
+처음에는 개인 Organization으로 시작해도 되지만, 실제 협업용 DB를 같이 쓸 것이라면 오너와 관리 책임을 먼저 정하는 편이 안전하다.
+
+#### Project name
+
+Supabase 프로젝트 이름이다.
+
+MeetPoint에서는 아래처럼 단순하고 목적이 드러나는 이름을 권장한다.
+
+1.  meetpoint
+2.  meetpoint-dev
+3.  meetpoint-preview
+
+예를 들어 첨부 화면처럼 기본값으로 계정명 기반 이름이 잡혀 있더라도 그대로 두기보다 프로젝트 목적이 드러나는 이름으로 바꾸는 편이 낫다.
+
+#### Database password
+
+Supabase PostgreSQL 데이터베이스 비밀번호이다.
+
+이 값은 아주 중요하다.
+
+1.  강한 문자열로 생성해야 한다.
+2.  나중에 직접 DB 접속이나 관리 작업에 쓸 수 있다.
+3.  .env.local에 넣는 NEXT\_PUBLIC\_SUPABASE\_URL, anon key, service role key와는 다른 값이다.
+
+즉, 이 비밀번호는 프로젝트 생성용 관리자 비밀번호라고 이해하면 된다.
+
+#### Region
+
+프로젝트 데이터베이스가 주로 운영될 리전이다.
+
+MeetPoint처럼 한국 기준으로 개발하고 테스트하는 경우에는 Asia-Pacific 계열을 우선 검토하는 편이 자연스럽다.
+
+핵심 기준은 아래와 같다.
+
+1.  팀과 사용자 위치에 너무 멀지 않은 리전 선택
+2.  배포 대상과 지나치게 멀지 않은 리전 선택
+3.  처음 정한 뒤 자주 바꾸지 않기
+
+#### Security 옵션 한 번에 정리
+
+MeetPoint 기준 권장값은 아래 3줄로 고정해서 이해하면 된다.
+
+1.  Enable Data API: ON
+2.  Automatically expose new tables and functions: OFF
+3.  Enable automatic RLS: ON
+
+#### Security - Enable Data API
+
+권장값은 ON이다.
+
+이유는 아래와 같다.
+
+1.  Supabase 클라이언트와 Data API 기반 접근에 필요한 기본 기능이다.
+2.  Next.js 서버에서 Supabase client를 사용할 때도 기본 전제가 되는 기능이다.
+3.  현재 MeetPoint 구조와 충돌하지 않는다.
+
+정리하면 MeetPoint에서는 ON이 맞다.
+
+#### Security - Automatically expose new tables and functions
+
+권장값은 OFF이다.
+
+왜냐하면 public 스키마의 새 테이블과 함수가 Data API 쪽에 자동 노출되는 범위를 넓혀 버릴 수 있기 때문이다.
+
+MeetPoint 기준으로는 아래 원칙이 더 안전하다.
+
+1.  필요한 테이블만 명확히 노출 여부를 검토한다.
+2.  자동으로 다 열어 두지 않는다.
+3.  브라우저 직접 접근보다 서버 Route Handler를 우선한다.
+
+즉, 이 항목은 OFF 권장이다.
+
+#### Security - Enable automatic RLS
+
+권장값은 ON이다.
+
+이유는 아래와 같다.
+
+1.  새 테이블에 RLS를 자동 적용하는 안전한 기본값을 만들 수 있다.
+2.  혹시 이후에 anon key나 publishable key 기반 접근이 들어오더라도 기본 차단 상태를 유지하기 쉽다.
+3.  현재 MeetPoint는 서버에서 service role key를 쓰므로, 서버 로직은 이 설정 때문에 막히지 않는다.
+
+다만 꼭 같이 이해해야 할 점은 아래와 같다.
+
+1.  RLS를 켠다고 해서 브라우저가 바로 데이터를 읽는 구조가 되는 것은 아니다.
+2.  현재 프로젝트는 여전히 서버 Route Handler 중심 구조를 유지한다.
+3.  service role key는 RLS를 우회하므로 서버 관리 작업에는 큰 제약이 없다.
+
+즉, 이 옵션은 ON 권장이다.
+
+#### Advanced configuration
+
+처음 MVP 세팅에서는 보통 건드리지 않아도 된다.
+
+특별한 네트워크, 보안, 비용, 성능 요구가 생길 때만 추가 검토하면 된다.
+
+#### Create new project 버튼을 누르기 전 최종 체크
+
+첨부 화면 기준으로 마지막 체크는 아래처럼 하면 된다.
+
+1.  Organization이 맞는가
+2.  Project name이 meetpoint 계열 이름으로 정리됐는가
+3.  Database password를 안전하게 저장했는가
+4.  Region이 팀과 가까운가
+5.  Enable Data API는 ON인가
+6.  Automatically expose new tables and functions는 OFF인가
+7.  Enable automatic RLS는 ON인가
+
+### 5.3 Database password는 무엇인가
+
+이 값은 Supabase 프로젝트의 PostgreSQL 비밀번호이다.
+
+처음 만들 때 강한 문자열로 생성해서 안전하게 보관해야 한다.
+
+이 값은 .env에 그대로 넣는 값이 아니라, 프로젝트 생성과 직접 DB 접속 같은 관리 작업에 쓰는 값이라고 이해하면 된다.
+
+### 5.4 Region은 어떻게 고르는가
+
+가장 단순한 기준은 아래와 같다.
+
+1.  팀이 주로 사용하는 리전에 가깝게 선택
+2.  배포 대상과 너무 멀지 않게 선택
+3.  특별한 이유가 없으면 한 번 정한 뒤 자주 바꾸지 않기
+
+MVP에서는 팀과 배포 환경이 크게 분산되어 있지 않다면 한 리전으로 고정해 운영하는 편이 단순하다.
+
+---
+
+## 6\. 프로젝트가 만들어지면 가장 먼저 확인할 것
+
+Supabase 프로젝트가 준비되면 아래 항목부터 확인한다.
+
+1.  Project URL
+2.  anon key
+3.  service role key
+4.  SQL Editor
+5.  Table Editor
+
+보통 URL과 키는 Connect 화면 또는 Project Settings의 API 관련 화면에서 확인할 수 있다.
+
+MeetPoint 기준으로 실제로 필요한 값은 아래 세 개다.
+
+1.  NEXT\_PUBLIC\_SUPABASE\_URL
+2.  NEXT\_PUBLIC\_SUPABASE\_ANON\_KEY
+3.  SUPABASE\_SERVICE\_ROLE\_KEY
+
+쉽게 구분하면 다음과 같다.
+
+1.  URL: 어느 Supabase 프로젝트에 붙을지 알려 주는 주소
+2.  anon key: 공개 가능한 제한 키
+3.  service role key: 서버 전용 관리자 키
+
+가장 중요한 보안 원칙은 아래 한 줄이다.
+
+SUPABASE\_SERVICE\_ROLE\_KEY는 절대 브라우저로 보내면 안 된다.
+
+### 6.1 Project URL, anon key, service role key는 어디서 복사하는가
+
+초보자가 실제로 가장 많이 막히는 부분이 바로 이 지점이다.
+
+프로젝트를 만든 뒤 Supabase 대시보드에서 보통 아래 순서로 찾으면 된다.
+
+1.  생성한 프로젝트 화면 진입
+2.  Connect 또는 Settings 관련 진입점 확인
+3.  API 또는 API Keys 화면 열기
+4.  Project URL 복사
+5.  anon key 또는 공개용 키 확인
+6.  service role key 확인
+
+현재 Supabase 문서에서는 Connect 화면이나 API Keys 화면에서 값을 복사하는 흐름을 안내하고 있다.
+
+MeetPoint 기준으로는 아래처럼 이해하면 된다.
+
+#### Project URL
+
+형태는 보통 아래처럼 생긴다.
+
+```
+https://your-project-ref.supabase.co
+```
+
+이 값은 .env.local의 NEXT\_PUBLIC\_SUPABASE\_URL에 넣는다.
+
+#### anon key
+
+현재 MeetPoint 문서 기준 환경 변수 이름은 NEXT\_PUBLIC\_SUPABASE\_ANON\_KEY를 사용한다.
+
+이 값은 공개 가능한 기본 키이며, 기존 Supabase 프로젝트에서는 anon key라는 이름으로 보이는 경우가 많다.
+
+이 값은 .env.local의 NEXT\_PUBLIC\_SUPABASE\_ANON\_KEY에 넣는다.
+
+#### service role key
+
+이 값은 서버 전용 관리자 키이다.
+
+이 값은 .env.local의 SUPABASE\_SERVICE\_ROLE\_KEY에 넣는다.
+
+절대 브라우저 코드나 NEXT\_PUBLIC\_ 변수로 옮기면 안 된다.
+
+### 6.2 값 복사 후 바로 해야 할 일
+
+세 값을 복사했다면 바로 아래 순서대로 처리하는 것이 안전하다.
+
+1.  .env.local에 즉시 붙여 넣기
+2.  변수 이름이 정확한지 확인
+3.  service role key가 공개 변수 자리에 들어가지 않았는지 확인
+4.  잘못 복사한 공백이나 줄바꿈이 없는지 확인
+5.  개발 서버를 다시 실행해서 환경 변수를 다시 읽게 하기
+
+### 6.3 현재 Supabase 문서와 MeetPoint 변수 이름을 함께 볼 때 주의할 점
+
+최근 Supabase 공식 문서에서는 publishable key라는 이름을 함께 안내하는 경우가 있다.
+
+하지만 현재 MeetPoint 문서와 프로젝트 기준은 아래 이름으로 통일되어 있다.
+
+1.  NEXT\_PUBLIC\_SUPABASE\_URL
+2.  NEXT\_PUBLIC\_SUPABASE\_ANON\_KEY
+3.  SUPABASE\_SERVICE\_ROLE\_KEY
+
+즉, 이 프로젝트 문서를 따라 세팅할 때는 기존 기준 변수명을 우선 사용하면 된다.
+
+---
+
+## 7\. MeetPoint에서 필요한 환경 변수
+
+이 프로젝트의 Supabase 관련 환경 변수는 아래 3개로 고정한다.
+
+```
+NEXT_PUBLIC_SUPABASE_URL=https://your-project-ref.supabase.co
+NEXT_PUBLIC_SUPABASE_ANON_KEY=your-anon-key
+SUPABASE_SERVICE_ROLE_KEY=your-service-role-key
+```
+
+각 값의 의미는 아래와 같다.
+
+### 7.1 NEXT\_PUBLIC\_SUPABASE\_URL
+
+1.  Supabase 프로젝트 주소이다.
+2.  브라우저와 서버가 공통으로 참조할 수 있다.
+3.  공개 가능한 값이다.
+
+### 7.2 NEXT\_PUBLIC\_SUPABASE\_ANON\_KEY
+
+1.  공개 가능한 기본 키이다.
+2.  브라우저에서 Supabase 클라이언트를 만들 때 사용할 수 있다.
+3.  service role key와 혼동하면 안 된다.
+
+### 7.3 SUPABASE\_SERVICE\_ROLE\_KEY
+
+1.  서버 전용 관리자 키이다.
+2.  Route Handler와 서버 유틸에서만 사용한다.
+3.  public 변수처럼 다루면 안 된다.
+
+---
+
+## 8\. 로컬에서 .env.local 준비하기
+
+로컬 개발을 시작할 때는 저장소 루트의 .env.local 파일에 아래 구조를 준비한다.
+
+```
+NEXT_PUBLIC_SUPABASE_URL=https://your-project-ref.supabase.co
+NEXT_PUBLIC_SUPABASE_ANON_KEY=your-anon-key
+SUPABASE_SERVICE_ROLE_KEY=your-service-role-key
+JWT_SECRET=meetpoint-local-jwt-secret-example
+NEXT_PUBLIC_KAKAO_MAP_APP_KEY=your-kakao-javascript-key
+KAKAO_LOCAL_REST_API_KEY=your-kakao-rest-key
+```
+
+여기서 Supabase 관련 값은 위 3개이다.
+
+처음 세팅할 때는 아래 순서로 확인하면 된다.
+
+1.  Supabase 프로젝트 URL 복사
+2.  anon key 복사
+3.  service role key 복사
+4.  .env.local에 입력
+5.  개발 서버 실행
+6.  DB 연결이 필요한 기능에서 오류가 없는지 확인
+
+---
+
+## 9\. MeetPoint용 DB 준비하기
+
+이 프로젝트의 MVP 기준 실제 생성 대상 테이블은 아래 3개다.
+
+1.  users
+2.  friends
+3.  messages
+
+즉, Supabase 프로젝트를 만들고 나면 다음 작업은 SQL Editor에서 기본 스키마를 만드는 일이다.
+
+### 9.1 먼저 실행할 확장
+
+```
+create extension if not exists pgcrypto;
+```
+
+이 확장은 UUID 기본값 생성에 사용한다.
+
+### 9.2 users, friends, messages 테이블 생성 SQL
+
+```
+create extension if not exists pgcrypto;
+
+create table if not exists public.users (
+    id uuid primary key default gen_random_uuid(),
+    nickname varchar(12) not null,
+    nickname_normalized varchar(12) not null,
+    password_hash text not null,
+    lat double precision null,
+    lng double precision null,
+    location_updated_at timestamptz null,
+    created_at timestamptz not null default now(),
+    constraint users_nickname_normalized_key unique (nickname_normalized)
+);
+
+create table if not exists public.friends (
+    id uuid primary key default gen_random_uuid(),
+    user_id uuid not null,
+    friend_id uuid not null,
+    created_at timestamptz not null default now(),
+    constraint friends_user_id_fkey foreign key (user_id) references public.users (id) on delete cascade,
+    constraint friends_friend_id_fkey foreign key (friend_id) references public.users (id) on delete cascade,
+    constraint friends_user_friend_unique unique (user_id, friend_id),
+    constraint friends_not_self check (user_id <> friend_id)
+);
+
+create table if not exists public.messages (
+    id uuid primary key default gen_random_uuid(),
+    sender_id uuid not null,
+    receiver_id uuid not null,
+    content varchar(500) not null,
+    created_at timestamptz not null default now(),
+    constraint messages_sender_id_fkey foreign key (sender_id) references public.users (id) on delete cascade,
+    constraint messages_receiver_id_fkey foreign key (receiver_id) references public.users (id) on delete cascade,
+    constraint messages_content_not_blank check (char_length(btrim(content)) >= 1)
+);
+
+create index if not exists users_nickname_normalized_idx
+    on public.users (nickname_normalized);
+
+create index if not exists users_location_updated_at_idx
+    on public.users (location_updated_at);
+
+create index if not exists friends_user_id_idx
+    on public.friends (user_id);
+
+create index if not exists friends_friend_id_idx
+    on public.friends (friend_id);
+
+create index if not exists messages_sender_receiver_created_at_idx
+    on public.messages (sender_id, receiver_id, created_at);
+
+create index if not exists messages_receiver_sender_created_at_idx
+    on public.messages (receiver_id, sender_id, created_at);
+```
+
+### 9.3 왜 이 구조를 쓰는가
+
+초보자 기준으로 이해하면 아래처럼 생각하면 쉽다.
+
+1.  users: 사용자 기본 정보와 마지막 위치 저장
+2.  friends: 친구 관계 저장
+3.  messages: 댓글형 채팅 메시지 저장
+
+추천 결과는 현재 MVP 기준으로 요청 시 계산해서 반환하고, DB에 기본 저장 대상으로 두지 않는다.
+
+---
+
+## 10\. Supabase 대시보드에서 실제 작업 순서
+
+처음 프로젝트를 만든 뒤에는 보통 아래 순서로 진행하면 된다.
+
+1.  SQL Editor 열기
+2.  테이블 생성 SQL 실행
+3.  Table Editor에서 users, friends, messages 생성 여부 확인
+4.  API URL과 키 다시 확인
+5.  로컬 .env.local 업데이트
+6.  Next.js 서버에서 연결 테스트
+
+즉, 대시보드에서는 DB 구조를 만들고, 프로젝트 코드에서는 그 DB에 안전하게 접근하는 역할로 나뉜다.
+
+### 10.1 SQL Editor 실행 순서 자세히 보기
+
+처음 해보는 사람은 SQL Editor에서 무엇을 어떤 순서로 실행해야 하는지 막히기 쉽다.
+
+MeetPoint 기준으로는 아래 순서가 가장 안전하다.
+
+1.  Supabase 프로젝트 대시보드에서 SQL Editor 열기
+2.  New query 선택
+3.  먼저 create extension if not exists pgcrypto; 한 줄만 실행
+4.  에러가 없는지 확인
+5.  users, friends, messages 생성 SQL 전체를 붙여 넣기
+6.  Run 실행
+7.  성공 메시지 확인
+8.  Table Editor로 이동해서 users, friends, messages 테이블이 실제로 생겼는지 확인
+9.  인덱스까지 정상 생성됐는지 필요하면 SQL Editor에서 재확인
+
+중요한 이유는 아래와 같다.
+
+1.  확장 생성에서 먼저 막히는지 확인할 수 있다.
+2.  테이블 생성 SQL에서 어느 지점이 실패했는지 구분하기 쉽다.
+3.  실행 성공과 실제 테이블 생성 여부를 따로 검증할 수 있다.
+
+### 10.2 처음 실행할 때 추천하는 실제 붙여 넣기 방식
+
+가장 단순한 방법은 두 번 나눠 실행하는 것이다.
+
+#### 1단계
+
+```
+create extension if not exists pgcrypto;
+```
+
+#### 2단계
+
+users, friends, messages 생성 SQL과 인덱스 SQL 전체를 한 번에 실행한다.
+
+이렇게 나누면 초보자도 어디에서 실패했는지 찾기 쉽다.
+
+### 10.3 SQL 실행 후 무엇을 확인해야 하는가
+
+SQL이 에러 없이 끝났다고 바로 완료로 보면 안 된다.
+
+아래 항목까지 같이 확인해야 한다.
+
+1.  Table Editor에 users 테이블이 보이는가
+2.  Table Editor에 friends 테이블이 보이는가
+3.  Table Editor에 messages 테이블이 보이는가
+4.  users에 nickname\_normalized unique 제약이 들어갔는가
+5.  friends에 user\_id, friend\_id 외래 키가 들어갔는가
+6.  messages에 sender\_id, receiver\_id 외래 키가 들어갔는가
+
+### 10.4 실행 중 에러가 나면 어떻게 보는가
+
+초보자 기준으로는 아래 순서대로 보면 된다.
+
+1.  오타가 있는지 확인
+2.  이미 같은 이름의 테이블이나 인덱스가 있는지 확인
+3.  create extension if not exists pgcrypto; 가 먼저 실행됐는지 확인
+4.  테이블 생성 순서가 users -> friends -> messages 순서인지 확인
+
+특히 friends와 messages는 users를 참조하므로, users가 먼저 만들어져 있어야 한다.
+
+---
+
+## 11\. MeetPoint 코드에서 Supabase를 연결하는 방식
+
+현재 프로젝트 설계 기준으로 Supabase 접근은 서버 한 곳으로 모으는 방식이 맞다.
+
+핵심 기준은 아래와 같다.
+
+1.  service role client 생성은 한 파일로 제한한다.
+2.  Route Handler 안에 DB 쿼리를 직접 길게 쓰지 않는다.
+3.  repository 함수로 분리해서 재사용한다.
+4.  브라우저는 앱 데이터에 대해 Supabase 직접 read/write를 하지 않는다.
+
+### 11.1 서버 전용 Supabase client 예시
+
+```
+// lib/supabase/server.ts
+import { createClient } from "@supabase/supabase-js";
+
+let cachedClient: ReturnType<typeof createClient> | null = null;
+
+function getSupabaseUrl() {
+  const value = process.env.NEXT_PUBLIC_SUPABASE_URL;
+
+  if (!value) {
+    throw new Error("NEXT_PUBLIC_SUPABASE_URL is not set");
+  }
+
+  return value;
+}
+
+function getServiceRoleKey() {
+  const value = process.env.SUPABASE_SERVICE_ROLE_KEY;
+
+  if (!value) {
+    throw new Error("SUPABASE_SERVICE_ROLE_KEY is not set");
+  }
+
+  return value;
+}
+
+export function getSupabaseAdminClient() {
+  if (!cachedClient) {
+    cachedClient = createClient(getSupabaseUrl(), getServiceRoleKey(), {
+      auth: {
+        autoRefreshToken: false,
+        persistSession: false,
+      },
+    });
+  }
+
+  return cachedClient;
+}
+```
+
+이 코드는 아래 이유로 중요하다.
+
+1.  DB 접근 진입점을 하나로 고정할 수 있다.
+2.  service role key 사용 위치를 통제할 수 있다.
+3.  환경 변수 누락을 초기에 바로 잡을 수 있다.
+
+### 11.2 repository 예시
+
+```
+// lib/repositories/users.ts
+import { getSupabaseAdminClient } from "@/lib/supabase/server";
+
+export async function findUserByNormalizedNickname(nicknameNormalized: string) {
+  const supabase = getSupabaseAdminClient();
+
+  const { data, error } = await supabase
+    .from("users")
+    .select("id, nickname, nickname_normalized, created_at")
+    .eq("nickname_normalized", nicknameNormalized)
+    .maybeSingle();
+
+  if (error) {
+    throw error;
+  }
+
+  return data;
+}
+```
+
+이렇게 분리하면 Route Handler는 입력 검증과 응답 형식에 집중하고, 실제 DB 쿼리는 repository가 맡게 된다.
+
+### 11.3 Route Handler 예시
+
+```
+// app/api/auth/signup/route.ts
+import { NextRequest, NextResponse } from "next/server";
+import { findUserByNormalizedNickname } from "@/lib/repositories/users";
+
+export async function POST(request: NextRequest) {
+  const body = await request.json();
+  const nickname = String(body.nickname ?? "").trim();
+  const nicknameNormalized = nickname.toLowerCase();
+
+  const existingUser = await findUserByNormalizedNickname(nicknameNormalized);
+
+  if (existingUser) {
+    return NextResponse.json(
+      { error: { code: "DUPLICATE_NICKNAME", message: "이미 사용 중인 닉네임입니다." } },
+      { status: 409 },
+    );
+  }
+
+  return NextResponse.json({ ok: true });
+}
+```
+
+이 예시에서 포인트는 하나이다.
+
+브라우저가 Supabase를 직접 호출하지 않고, 반드시 서버 API를 거친다.
+
+---
+
+## 12\. 왜 Supabase Auth를 지금 쓰지 않는가
+
+Supabase를 처음 접하면 로그인을 바로 Supabase Auth로 붙이고 싶어질 수 있다.
+
+하지만 현재 MeetPoint MVP는 아래 이유로 Supabase Auth를 로그인 기준으로 채택하지 않는다.
+
+1.  닉네임 기반 단순 시작 흐름이 MVP 요구사항에 더 가깝다.
+2.  JWT + httpOnly 쿠키 방식이 현재 인증 문서와 맞다.
+3.  DB 접근과 로그인 정책을 분리하면 현재 구현 범위를 더 단순하게 유지할 수 있다.
+
+즉, Supabase 대시보드에 GitHub로 가입했다고 해서, 앱 사용자도 GitHub 로그인으로 들어오는 구조가 되는 것은 아니다.
+
+이 둘을 섞어 이해하면 문서와 코드가 바로 꼬인다.
+
+---
+
+## 13\. 팀 작업 기준으로 권장하는 운영 방법
+
+Supabase 프로젝트를 팀이 함께 쓸 때는 아래 기준이 안전하다.
+
+1.  프로젝트 오너를 명확히 정한다.
+2.  실제 DB를 건드리는 인원만 프로젝트 접근 권한을 가진다.
+3.  service role key는 꼭 필요한 사람만 접근한다.
+4.  키를 메신저 대화에 그대로 붙여 넣지 않는다.
+5.  환경 변수는 저장소가 아니라 각자 로컬 환경과 배포 환경에서 관리한다.
+
+특히 service role key는 관리자 키이므로, 유출되면 테이블 데이터 전체에 영향을 줄 수 있다는 점을 항상 전제로 둬야 한다.
+
+---
+
+## 14\. 자주 하는 실수
+
+### 14.1 GitHub로 Supabase 가입과 앱 로그인 기능을 같은 것으로 생각하는 경우
+
+아니다.
+
+GitHub로 Supabase에 가입하는 것은 팀 개발자가 Supabase 대시보드를 쓰기 위한 계정 생성이다.
+
+MeetPoint 사용자 로그인은 별도 구현이다.
+
+### 14.2 service role key를 브라우저 코드에 넣는 경우
+
+가장 위험한 실수다.
+
+SUPABASE\_SERVICE\_ROLE\_KEY는 서버에서만 사용해야 한다.
+
+### 14.3 브라우저에서 바로 users, friends, messages 테이블에 쓰는 경우
+
+현재 프로젝트 기준과 맞지 않는다.
+
+모든 쓰기 작업은 Route Handler를 통해 처리한다.
+
+### 14.4 테이블 생성 전에 코드부터 작성하는 경우
+
+로컬 코드만 먼저 만들면 실제 데이터 구조와 어긋나기 쉽다.
+
+먼저 SQL Editor에서 테이블 구조를 확정한 뒤 코드를 연결하는 편이 안전하다.
+
+### 14.5 nickname과 nickname\_normalized를 같은 것으로 생각하는 경우
+
+이 프로젝트에서는 다르게 취급한다.
+
+1.  nickname: 화면 표시용
+2.  nickname\_normalized: 비교와 중복 검사 기준
+
+---
+
+## 15\. 처음 세팅할 때 추천 순서
+
+처음부터 다시 세팅해야 한다면 아래 순서로 진행하면 된다.
+
+1.  GitHub 계정으로 Supabase Dashboard 가입
+2.  Supabase 프로젝트 생성
+3.  Project URL, anon key, service role key 확인
+4.  .env.local에 환경 변수 입력
+5.  SQL Editor에서 users, friends, messages 생성
+6.  Next.js 서버 전용 Supabase client 유틸 작성
+7.  repository 함수 작성
+8.  Route Handler에서 repository 연결
+9.  회원가입, 친구, 메시지 API 순서대로 검증
+
+---
+
+## 16\. 체크리스트
+
+마지막으로 MeetPoint 기준 체크리스트를 정리하면 아래와 같다.
+
+1.  Supabase Dashboard에 GitHub 계정으로 로그인 가능한가
+2.  Supabase 프로젝트가 생성되었는가
+3.  NEXT\_PUBLIC\_SUPABASE\_URL을 확보했는가
+4.  NEXT\_PUBLIC\_SUPABASE\_ANON\_KEY를 확보했는가
+5.  SUPABASE\_SERVICE\_ROLE\_KEY를 확보했는가
+6.  .env.local에 값이 정확히 들어갔는가
+7.  SQL Editor에서 users, friends, messages를 만들었는가
+8.  브라우저가 아니라 서버에서 DB를 호출하도록 구조를 잡았는가
+9.  service role key가 클라이언트로 노출되지 않았는가
+10.  JWT 인증 구조와 Supabase DB 구조를 서로 혼동하지 않았는가
+
+---
+
+## 17\. 함께 보면 좋은 문서
+
+1.  engineering/auth/jwt.md
+2.  engineering/config/env.md
+3.  PRD/03.기술 설계.md
+4.  PRD/06.DB 스키마 및 SQL 문서.md
+
+이 문서들을 같이 보면 아래 흐름이 한 번에 연결된다.
+
+1.  JWT는 어떻게 로그인 상태를 유지하는가
+2.  Supabase는 어떤 데이터를 저장하는가
+3.  환경 변수는 무엇을 넣어야 하는가
+4.  Next.js 서버는 DB에 어떻게 접근해야 하는가
