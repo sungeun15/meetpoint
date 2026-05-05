@@ -60,7 +60,7 @@ Supabase 사이트와 대시보드에 로그인하기 위한 계정이다.
 프로젝트를 만들면 아래 값들이 생긴다.
 
 1.  프로젝트 URL
-2.  anon key
+2.  publishable key
 3.  service role key
 4.  SQL Editor
 5.  Table Editor
@@ -153,7 +153,7 @@ Supabase PostgreSQL 데이터베이스 비밀번호이다.
 
 1.  강한 문자열로 생성해야 한다.
 2.  나중에 직접 DB 접속이나 관리 작업에 쓸 수 있다.
-3.  .env.local에 넣는 NEXT\_PUBLIC\_SUPABASE\_URL, anon key, service role key와는 다른 값이다.
+3.  .env.local에 넣는 NEXT\_PUBLIC\_SUPABASE\_URL, publishable key, service role key와는 다른 값이다.
 
 즉, 이 비밀번호는 프로젝트 생성용 관리자 비밀번호라고 이해하면 된다.
 
@@ -210,7 +210,7 @@ MeetPoint 기준으로는 아래 원칙이 더 안전하다.
 이유는 아래와 같다.
 
 1.  새 테이블에 RLS를 자동 적용하는 안전한 기본값을 만들 수 있다.
-2.  혹시 이후에 anon key나 publishable key 기반 접근이 들어오더라도 기본 차단 상태를 유지하기 쉽다.
+2.  혹시 이후에 publishable key 기반 접근이 들어오더라도 기본 차단 상태를 유지하기 쉽다.
 3.  현재 MeetPoint는 서버에서 service role key를 쓰므로, 서버 로직은 이 설정 때문에 막히지 않는다.
 
 다만 꼭 같이 이해해야 할 점은 아래와 같다.
@@ -264,7 +264,7 @@ MVP에서는 팀과 배포 환경이 크게 분산되어 있지 않다면 한 �
 Supabase 프로젝트가 준비되면 아래 항목부터 확인한다.
 
 1.  Project URL
-2.  anon key
+2.  publishable key
 3.  service role key
 4.  SQL Editor
 5.  Table Editor
@@ -274,20 +274,20 @@ Supabase 프로젝트가 준비되면 아래 항목부터 확인한다.
 MeetPoint 기준으로 실제로 필요한 값은 아래 세 개다.
 
 1.  NEXT\_PUBLIC\_SUPABASE\_URL
-2.  NEXT\_PUBLIC\_SUPABASE\_ANON\_KEY
+2.  NEXT\_PUBLIC\_SUPABASE\_PUBLISHABLE\_KEY
 3.  SUPABASE\_SERVICE\_ROLE\_KEY
 
 쉽게 구분하면 다음과 같다.
 
 1.  URL: 어느 Supabase 프로젝트에 붙을지 알려 주는 주소
-2.  anon key: 공개 가능한 제한 키
+2.  publishable key: 공개 가능한 제한 키
 3.  service role key: 서버 전용 관리자 키
 
 가장 중요한 보안 원칙은 아래 한 줄이다.
 
 SUPABASE\_SERVICE\_ROLE\_KEY는 절대 브라우저로 보내면 안 된다.
 
-### 6.1 Project URL, anon key, service role key는 어디서 복사하는가
+### 6.1 Project URL, publishable key, service role key는 어디서 복사하는가
 
 초보자가 실제로 가장 많이 막히는 부분이 바로 이 지점이다.
 
@@ -297,7 +297,7 @@ SUPABASE\_SERVICE\_ROLE\_KEY는 절대 브라우저로 보내면 안 된다.
 2.  Connect 또는 Settings 관련 진입점 확인
 3.  API 또는 API Keys 화면 열기
 4.  Project URL 복사
-5.  anon key 또는 공개용 키 확인
+5.  publishable key 확인
 6.  service role key 확인
 
 현재 Supabase 문서에서는 Connect 화면이나 API Keys 화면에서 값을 복사하는 흐름을 안내하고 있다.
@@ -314,13 +314,13 @@ https://your-project-ref.supabase.co
 
 이 값은 .env.local의 NEXT\_PUBLIC\_SUPABASE\_URL에 넣는다.
 
-#### anon key
+#### publishable key
 
-현재 MeetPoint 문서 기준 환경 변수 이름은 NEXT\_PUBLIC\_SUPABASE\_ANON\_KEY를 사용한다.
+현재 MeetPoint 문서 기준 환경 변수 이름은 NEXT\_PUBLIC\_SUPABASE\_PUBLISHABLE\_KEY를 사용한다.
 
-이 값은 공개 가능한 기본 키이며, 기존 Supabase 프로젝트에서는 anon key라는 이름으로 보이는 경우가 많다.
+이 값은 공개 가능한 기본 키이며, 예전 자료에서는 anon key라는 이름으로 보이는 경우가 있다.
 
-이 값은 .env.local의 NEXT\_PUBLIC\_SUPABASE\_ANON\_KEY에 넣는다.
+이 값은 .env.local의 NEXT\_PUBLIC\_SUPABASE\_PUBLISHABLE\_KEY에 넣는다.
 
 #### service role key
 
@@ -342,15 +342,15 @@ https://your-project-ref.supabase.co
 
 ### 6.3 현재 Supabase 문서와 MeetPoint 변수 이름을 함께 볼 때 주의할 점
 
-최근 Supabase 공식 문서에서는 publishable key라는 이름을 함께 안내하는 경우가 있다.
+현재 Supabase Connect 화면과 공식 문서는 publishable key 기준으로 안내한다.
 
-하지만 현재 MeetPoint 문서와 프로젝트 기준은 아래 이름으로 통일되어 있다.
+MeetPoint 문서와 프로젝트 기준도 아래 이름으로 통일한다.
 
 1.  NEXT\_PUBLIC\_SUPABASE\_URL
-2.  NEXT\_PUBLIC\_SUPABASE\_ANON\_KEY
+2.  NEXT\_PUBLIC\_SUPABASE\_PUBLISHABLE\_KEY
 3.  SUPABASE\_SERVICE\_ROLE\_KEY
 
-즉, 이 프로젝트 문서를 따라 세팅할 때는 기존 기준 변수명을 우선 사용하면 된다.
+예전 자료에서 anon key라는 이름이 보여도, 현재 프로젝트 세팅은 publishable key 기준으로 맞추면 된다.
 
 ---
 
@@ -360,7 +360,7 @@ https://your-project-ref.supabase.co
 
 ```
 NEXT_PUBLIC_SUPABASE_URL=https://your-project-ref.supabase.co
-NEXT_PUBLIC_SUPABASE_ANON_KEY=your-anon-key
+NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=your-publishable-key
 SUPABASE_SERVICE_ROLE_KEY=your-service-role-key
 ```
 
@@ -372,7 +372,7 @@ SUPABASE_SERVICE_ROLE_KEY=your-service-role-key
 2.  브라우저와 서버가 공통으로 참조할 수 있다.
 3.  공개 가능한 값이다.
 
-### 7.2 NEXT\_PUBLIC\_SUPABASE\_ANON\_KEY
+### 7.2 NEXT\_PUBLIC\_SUPABASE\_PUBLISHABLE\_KEY
 
 1.  공개 가능한 기본 키이다.
 2.  브라우저에서 Supabase 클라이언트를 만들 때 사용할 수 있다.
@@ -392,7 +392,7 @@ SUPABASE_SERVICE_ROLE_KEY=your-service-role-key
 
 ```
 NEXT_PUBLIC_SUPABASE_URL=https://your-project-ref.supabase.co
-NEXT_PUBLIC_SUPABASE_ANON_KEY=your-anon-key
+NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=your-publishable-key
 SUPABASE_SERVICE_ROLE_KEY=your-service-role-key
 JWT_SECRET=meetpoint-local-jwt-secret-example
 NEXT_PUBLIC_KAKAO_MAP_APP_KEY=your-kakao-javascript-key
@@ -404,11 +404,82 @@ KAKAO_LOCAL_REST_API_KEY=your-kakao-rest-key
 처음 세팅할 때는 아래 순서로 확인하면 된다.
 
 1.  Supabase 프로젝트 URL 복사
-2.  anon key 복사
+2.  publishable key 복사
 3.  service role key 복사
 4.  .env.local에 입력
 5.  개발 서버 실행
 6.  DB 연결이 필요한 기능에서 오류가 없는지 확인
+
+### 8.1 왜 기본 .env.local에는 PostgreSQL 직접 접속 정보를 넣지 않는가
+
+MeetPoint 앱을 실행하고 기존 테이블에 접근하는 데에는 아래 3개면 충분하다.
+
+1.  NEXT\_PUBLIC\_SUPABASE\_URL
+2.  NEXT\_PUBLIC\_SUPABASE\_PUBLISHABLE\_KEY
+3.  SUPABASE\_SERVICE\_ROLE\_KEY
+
+하지만 새 테이블 생성, ALTER TABLE, 인덱스 생성 같은 스키마 변경은 앱 실행과 다른 관리자 작업이다.
+
+그래서 기본 문서에서는 앱 실행에 꼭 필요한 값만 먼저 안내하고, PostgreSQL 직접 접속 정보나 DB password는 선택적인 관리자용 정보로 분리해 관리한다.
+
+이렇게 나누는 이유는 아래와 같다.
+
+1.  앱 실행용 값과 스키마 변경용 값을 섞지 않기 위해서이다.
+2.  불필요하게 강한 DB 접속 정보를 모든 개발 환경에 기본 배포하지 않기 위해서이다.
+3.  connection string이나 DB password가 문서나 저장소에 잘못 남는 사고를 줄이기 위해서이다.
+4.  local, preview, production에서 관리자용 접속 정보를 더 엄격하게 분리하기 위해서이다.
+
+### 8.2 새 테이블 생성이나 직접 SQL 실행에는 무엇이 더 필요한가
+
+새 테이블 생성이나 직접 SQL 실행이 필요하면 아래 중 하나가 더 있어야 한다.
+
+1.  Supabase SQL Editor
+2.  PostgreSQL 직접 접속 정보
+3.  Supabase CLI migration 환경
+4.  별도로 만든 관리자용 내부 스크립트
+
+PostgreSQL 접속 정보는 크게 아래 두 방식으로 볼 수 있다.
+
+1.  session pooler 연결
+2.  direct 연결
+
+실무적으로는 로컬 PC나 일반 IPv4 네트워크에서 먼저 session pooler 연결을 시도하는 편이 안전하다.
+
+direct 연결은 `db.<project-ref>.supabase.co` 호스트를 직접 사용하므로, 네트워크 환경에 따라 IPv6 지원이나 별도 IPv4 구성이 필요할 수 있다.
+
+session pooler 연결 문자열 예시는 아래와 같다.
+
+```
+SUPABASE_DATABASE_URL=postgresql://postgres.your-project-ref:[YOUR_PASSWORD]@aws-0-your-region.pooler.supabase.com:5432/postgres
+```
+
+여기서 꼭 같이 이해해야 하는 점은 아래와 같다.
+
+1.  pooler URL에서는 사용자명이 `postgres.your-project-ref` 형태가 된다.
+2.  host는 `db.`가 아니라 `aws-0-...pooler.supabase.com` 형태가 된다.
+3.  session mode 기준 포트는 보통 5432이다.
+
+direct 연결 문자열 예시는 아래와 같다.
+
+```
+SUPABASE_DATABASE_URL=postgresql://postgres:[YOUR_PASSWORD]@db.your-project-ref.supabase.co:5432/postgres?sslmode=require
+```
+
+또는 아래처럼 나눠서 둘 수도 있다.
+
+```
+SUPABASE_DB_HOST=db.your-project-ref.supabase.co
+SUPABASE_DB_PORT=5432
+SUPABASE_DB_NAME=postgres
+SUPABASE_DB_USER=postgres
+SUPABASE_DATABASE_PASSWORD=your-postgres-password
+```
+
+주의:
+
+1.  위 값들은 앱 실행에 필수인 기본 환경 변수는 아니다.
+2.  스키마 변경이나 직접 DB 접속이 필요한 로컬 관리자 작업에서만 사용한다.
+3.  특히 connection string, DB password, 관리자 접속 정보는 절대 공개 저장소에 커밋하면 안 된다.
 
 ---
 
@@ -765,13 +836,14 @@ SUPABASE\_SERVICE\_ROLE\_KEY는 서버에서만 사용해야 한다.
 
 1.  GitHub 계정으로 Supabase Dashboard 가입
 2.  Supabase 프로젝트 생성
-3.  Project URL, anon key, service role key 확인
+3.  Project URL, publishable key, service role key 확인
 4.  .env.local에 환경 변수 입력
-5.  SQL Editor에서 users, friends, messages 생성
-6.  Next.js 서버 전용 Supabase client 유틸 작성
-7.  repository 함수 작성
-8.  Route Handler에서 repository 연결
-9.  회원가입, 친구, 메시지 API 순서대로 검증
+5.  필요하면 PostgreSQL 직접 접속 정보 또는 SQL Editor 준비
+6.  SQL Editor에서 users, friends, messages 생성
+7.  Next.js 서버 전용 Supabase client 유틸 작성
+8.  repository 함수 작성
+9.  Route Handler에서 repository 연결
+10.  회원가입, 친구, 메시지 API 순서대로 검증
 
 ---
 
@@ -782,7 +854,7 @@ SUPABASE\_SERVICE\_ROLE\_KEY는 서버에서만 사용해야 한다.
 1.  Supabase Dashboard에 GitHub 계정으로 로그인 가능한가
 2.  Supabase 프로젝트가 생성되었는가
 3.  NEXT\_PUBLIC\_SUPABASE\_URL을 확보했는가
-4.  NEXT\_PUBLIC\_SUPABASE\_ANON\_KEY를 확보했는가
+4.  NEXT\_PUBLIC\_SUPABASE\_PUBLISHABLE\_KEY를 확보했는가
 5.  SUPABASE\_SERVICE\_ROLE\_KEY를 확보했는가
 6.  .env.local에 값이 정확히 들어갔는가
 7.  SQL Editor에서 users, friends, messages를 만들었는가

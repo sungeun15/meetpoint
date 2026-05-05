@@ -46,7 +46,7 @@ preview 에서는 production 과 같은 구조의 환경 변수를 넣는 편이
 
 ### 3.3 production
 
-production 은 실제 배포 환경이다.
+production 은 실제 최종 배포 환경이다.
 
 여기에는 실제 운영용 Supabase 값, 실제 JWT 비밀 값, 실제 Kakao 키를 넣는다.
 
@@ -71,17 +71,18 @@ production 은 실제 배포 환경이다.
 1.  Supabase 연결 실패
 2.  인증 또는 데이터 호출 초기화 실패
 
-### 4.2 NEXT\_PUBLIC\_SUPABASE\_ANON\_KEY
+### 4.2 NEXT\_PUBLIC\_SUPABASE\_PUBLISHABLE\_KEY
 
 역할:
 
-1.  Supabase의 공개용 anon key
+1.  Supabase의 공개용 publishable key
 2.  브라우저에서 Supabase 클라이언트를 만들 때 사용 가능
 
 특징:
 
 1.  공개 가능한 키지만 아무 값이나 넣으면 안 된다.
-2.  service role key 와 혼동하면 안 된다.
+2.  예전 자료에서는 anon key라는 이름으로 보일 수 있다.
+3.  service role key 와 혼동하면 안 된다.
 
 누락 시 증상:
 
@@ -164,7 +165,7 @@ production 은 실제 배포 환경이다.
 공개 가능 변수:
 
 1.  NEXT\_PUBLIC\_SUPABASE\_URL
-2.  NEXT\_PUBLIC\_SUPABASE\_ANON\_KEY
+2.  NEXT\_PUBLIC\_SUPABASE\_PUBLISHABLE\_KEY
 3.  NEXT\_PUBLIC\_KAKAO\_MAP\_APP\_KEY
 
 서버 전용 변수:
@@ -197,7 +198,7 @@ production 은 실제 배포 환경이다.
 
 ```
 NEXT_PUBLIC_SUPABASE_URL=...
-NEXT_PUBLIC_SUPABASE_ANON_KEY=...
+NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=...
 SUPABASE_SERVICE_ROLE_KEY=...
 JWT_SECRET=...
 NEXT_PUBLIC_KAKAO_MAP_APP_KEY=...
@@ -208,7 +209,7 @@ KAKAO_LOCAL_REST_API_KEY=...
 
 ```
 NEXT_PUBLIC_SUPABASE_URL=https://sample-project.supabase.co
-NEXT_PUBLIC_SUPABASE_ANON_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.sample-anon-key-value
+NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=sb_publishable_sample-key-value
 SUPABASE_SERVICE_ROLE_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.sample-service-role-key-value
 JWT_SECRET=meetpoint-local-jwt-secret-2026-example
 NEXT_PUBLIC_KAKAO_MAP_APP_KEY=1234567890abcdef1234567890abcdef
@@ -218,11 +219,16 @@ KAKAO_LOCAL_REST_API_KEY=abcdef1234567890abcdef1234567890
 각 값은 아래처럼 이해하면 된다.
 
 1.  NEXT\_PUBLIC\_SUPABASE\_URL: Supabase 프로젝트 주소
-2.  NEXT\_PUBLIC\_SUPABASE\_ANON\_KEY: 브라우저에서 사용 가능한 공개용 Supabase 키
+2.  NEXT\_PUBLIC\_SUPABASE\_PUBLISHABLE\_KEY: 브라우저에서 사용 가능한 공개용 Supabase 키
 3.  SUPABASE\_SERVICE\_ROLE\_KEY: 서버 전용 Supabase 관리자 키
 4.  JWT\_SECRET: JWT 서명과 검증에 쓰는 서버 전용 비밀 문자열
 5.  NEXT\_PUBLIC\_KAKAO\_MAP\_APP\_KEY: 브라우저에서 지도를 띄울 때 쓰는 Kakao JavaScript 키
 6.  KAKAO\_LOCAL\_REST\_API\_KEY: 서버에서 장소 검색에 쓰는 Kakao REST API 키
+
+참고:
+
+1.  최근 Supabase Connect 화면과 공식 문서는 NEXT\_PUBLIC\_SUPABASE\_PUBLISHABLE\_KEY 기준으로 안내한다.
+2.  예전 자료에서 보이는 anon key는 공개용 키의 이전 명칭으로 이해하면 된다.
 
 주의:
 
@@ -234,6 +240,71 @@ KAKAO_LOCAL_REST_API_KEY=abcdef1234567890abcdef1234567890
 
 1.  실제 값은 저장소에 커밋하지 않는다.
 2.  로컬 테스트 값과 운영 값을 섞지 않는다.
+
+### 6.1 앱 실행 변수와 스키마 변경 변수는 다르다
+
+MeetPoint 앱을 실행하고 기존 테이블에 접근하는 데에는 아래 3개면 충분하다.
+
+1.  NEXT\_PUBLIC\_SUPABASE\_URL
+2.  NEXT\_PUBLIC\_SUPABASE\_PUBLISHABLE\_KEY
+3.  SUPABASE\_SERVICE\_ROLE\_KEY
+
+하지만 새 테이블 생성, ALTER TABLE, 인덱스 생성 같은 스키마 변경은 앱 실행과 다른 관리자 작업이다.
+
+이 작업은 단순 데이터 조회나 저장보다 더 강한 관리자 경로가 필요하므로, 앱 실행용 기본 변수와 분리해서 관리하는 편이 안전하다.
+
+즉, 기본 .env 문서에는 앱 실행에 꼭 필요한 값만 먼저 두고, PostgreSQL 직접 접속 정보는 선택적인 관리자용 변수로 따로 보는 것이 맞다.
+
+### 6.2 새 테이블 생성까지 하려면 추가 정보가 필요하다
+
+새 테이블 생성이나 직접 SQL 실행이 필요할 때는 아래 중 하나가 더 있어야 한다.
+
+1.  Supabase SQL Editor
+2.  PostgreSQL 직접 접속 정보
+3.  Supabase CLI migration 환경
+4.  별도로 만든 관리자용 내부 스크립트
+
+PostgreSQL 접속 정보는 크게 아래 두 방식으로 볼 수 있다.
+
+1.  session pooler 연결
+2.  direct 연결
+
+로컬 개발 환경이나 일반 IPv4 네트워크에서는 session pooler 연결을 먼저 쓰는 편이 안전하다.
+
+direct 연결은 `db.<project-ref>.supabase.co` 호스트를 직접 쓰므로, 네트워크 환경에 따라 IPv6 지원이나 별도 IPv4 구성이 필요할 수 있다.
+
+session pooler 기준 예시는 아래와 같다.
+
+```
+SUPABASE_DATABASE_URL=postgresql://postgres.your-project-ref:[YOUR_PASSWORD]@aws-0-your-region.pooler.supabase.com:5432/postgres
+```
+
+중요:
+
+1.  pooler URL에서는 사용자명이 `postgres.your-project-ref` 형태가 된다.
+2.  host는 `db.`가 아니라 `aws-0-...pooler.supabase.com` 형태를 사용한다.
+
+direct 연결 기준 예시는 아래와 같다.
+
+```
+SUPABASE_DATABASE_URL=postgresql://postgres:[YOUR_PASSWORD]@db.your-project-ref.supabase.co:5432/postgres?sslmode=require
+```
+
+또는 아래처럼 나눠서 관리할 수도 있다.
+
+```
+SUPABASE_DB_HOST=db.your-project-ref.supabase.co
+SUPABASE_DB_PORT=5432
+SUPABASE_DB_NAME=postgres
+SUPABASE_DB_USER=postgres
+SUPABASE_DATABASE_PASSWORD=your-postgres-password
+```
+
+주의:
+
+1.  위 값들은 앱 실행에 필수인 기본 변수는 아니다.
+2.  DB 스키마 변경이나 직접 접속이 필요할 때만 로컬 관리자용으로 관리한다.
+3.  특히 connection string, DB password 같은 값은 절대 공개 저장소에 커밋하지 않는다.
 
 ## 7\. 배포 환경 설정 방법
 
@@ -259,7 +330,7 @@ KAKAO_LOCAL_REST_API_KEY=abcdef1234567890abcdef1234567890
 
 ## 8\. 누락 또는 오설정 시 증상
 
-NEXT\_PUBLIC\_SUPABASE\_URL 또는 NEXT\_PUBLIC\_SUPABASE\_ANON\_KEY 문제:
+NEXT\_PUBLIC\_SUPABASE\_URL 또는 NEXT\_PUBLIC\_SUPABASE\_PUBLISHABLE\_KEY 문제:
 
 1.  Supabase 초기화 실패
 2.  로그인 흐름 이상
