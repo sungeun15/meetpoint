@@ -70,12 +70,12 @@ CLI 배포도 가능하지만, MVP 운영 기준에서는 Git 연동 방식이 �
 
 배포 전에 아래 환경 변수를 미리 준비해야 한다.
 
-1.  NEXT_PUBLIC_SUPABASE_URL
-2.  NEXT_PUBLIC_SUPABASE_ANON_KEY
-3.  SUPABASE_SERVICE_ROLE_KEY
-4.  JWT_SECRET
-5.  NEXT_PUBLIC_KAKAO_MAP_APP_KEY
-6.  KAKAO_LOCAL_REST_API_KEY
+1.  NEXT\_PUBLIC\_SUPABASE\_URL
+2.  NEXT\_PUBLIC\_SUPABASE\_PUBLISHABLE\_KEY
+3.  SUPABASE\_SERVICE\_ROLE\_KEY
+4.  JWT\_SECRET
+5.  NEXT\_PUBLIC\_KAKAO\_MAP\_APP\_KEY
+6.  KAKAO\_LOCAL\_REST\_API\_KEY
 
 이 값이 하나라도 빠지면 인증, 위치 저장, Kakao 지도, 추천 API 중 일부가 바로 실패할 수 있다.
 
@@ -95,11 +95,11 @@ Framework Preset 은 Next.js 로 설정한다.
 
 즉, Vercel 화면에서 app, public, package.json 이 바로 보이는 위치가 Root Directory 기준이다.
 
-잘못해서 workspace 전체나 .my_work 같은 상위 작업 폴더를 기준으로 잡으면 빌드가 실패하거나 엉뚱한 폴더가 배포될 수 있다.
+잘못해서 workspace 전체나 .my\_work 같은 상위 작업 폴더를 기준으로 잡으면 빌드가 실패하거나 엉뚱한 폴더가 배포될 수 있다.
 
 기본값:
 
-```text
+```
 Root Directory = 저장소 루트
 ```
 
@@ -111,7 +111,7 @@ Root Directory = 저장소 루트
 
 자동 감지가 되면 기본값을 써도 되지만, 수동 입력이 필요하면 아래처럼 설정한다.
 
-```bash
+```
 pnpm install
 ```
 
@@ -121,7 +121,7 @@ package.json 기준 build 스크립트는 next build 이다.
 
 Vercel에서 수동 입력이 필요하면 아래처럼 설정한다.
 
-```bash
+```
 pnpm build
 ```
 
@@ -137,7 +137,7 @@ Next.js 앱이므로 별도 output directory 를 직접 지정하지 않는 것�
 2.  JWT 검증, Kakao Local API 호출, Supabase 서버 키 사용은 모두 서버 측 동작이다.
 3.  브라우저 전용 키와 서버 전용 키를 섞어 넣으면 안 된다.
 
-즉, NEXT_PUBLIC_ 로 시작하는 값만 브라우저 노출 가능 값이고, 나머지는 서버 전용 값으로 관리한다.
+즉, NEXT\_PUBLIC\_ 로 시작하는 값만 브라우저 노출 가능 값이고, 나머지는 서버 전용 값으로 관리한다.
 
 ## 6\. 환경 변수 설정
 
@@ -147,16 +147,16 @@ Production 에는 실제 운영용 값을 넣는다.
 
 최소한 아래 값은 모두 채워야 한다.
 
-```text
+```
 NEXT_PUBLIC_SUPABASE_URL
-NEXT_PUBLIC_SUPABASE_ANON_KEY
+NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY
 SUPABASE_SERVICE_ROLE_KEY
 JWT_SECRET
 NEXT_PUBLIC_KAKAO_MAP_APP_KEY
 KAKAO_LOCAL_REST_API_KEY
 ```
 
-JWT_SECRET 은 충분히 길고 예측하기 어려운 문자열을 사용한다.
+JWT\_SECRET 은 충분히 길고 예측하기 어려운 문자열을 사용한다.
 
 ### 6.2 Preview 환경 변수
 
@@ -172,9 +172,9 @@ JWT_SECRET 은 충분히 길고 예측하기 어려운 문자열을 사용한다
 
 ### 6.3 민감 정보 관리 원칙
 
-1.  JWT_SECRET 은 절대 NEXT_PUBLIC_ 로 시작하면 안 된다.
-2.  SUPABASE_SERVICE_ROLE_KEY 는 서버 전용 값으로만 사용한다.
-3.  KAKAO_LOCAL_REST_API_KEY 는 브라우저 코드에 직접 넣지 않는다.
+1.  JWT\_SECRET 은 절대 NEXT\_PUBLIC\_ 로 시작하면 안 된다.
+2.  SUPABASE\_SERVICE\_ROLE\_KEY 는 서버 전용 값으로만 사용한다.
+3.  KAKAO\_LOCAL\_REST\_API\_KEY 는 브라우저 코드에 직접 넣지 않는다.
 4.  환경 변수 값은 문서에 실제 값 자체를 적지 않는다.
 5.  값 변경 후에는 필요한 경우 재배포해서 반영 여부를 확인한다.
 
@@ -236,8 +236,8 @@ Preview 배포에서는 아래를 먼저 본다.
 
 ### 8.3 Kakao 연동 점검
 
-1.  NEXT_PUBLIC_KAKAO_MAP_APP_KEY 로 지도 SDK가 정상 로드되는지 확인한다.
-2.  KAKAO_LOCAL_REST_API_KEY 로 추천 장소 조회가 정상 동작하는지 확인한다.
+1.  NEXT\_PUBLIC\_KAKAO\_MAP\_APP\_KEY 로 지도 SDK가 정상 로드되는지 확인한다.
+2.  KAKAO\_LOCAL\_REST\_API\_KEY 로 추천 장소 조회가 정상 동작하는지 확인한다.
 3.  브라우저 콘솔과 Vercel 로그에 Kakao 관련 오류가 없는지 확인한다.
 
 ## 9\. 자주 발생하는 문제
@@ -254,7 +254,7 @@ Preview 배포에서는 아래를 먼저 본다.
 
 1.  Vercel Project Settings > Environment Variables 확인
 2.  Preview 와 Production 에 모두 값이 들어갔는지 확인
-3.  NEXT_PUBLIC_ 와 서버 전용 변수 이름을 섞지 않았는지 확인
+3.  NEXT\_PUBLIC\_ 와 서버 전용 변수 이름을 섞지 않았는지 확인
 
 ### 9.2 빌드 실패
 
@@ -280,7 +280,7 @@ Preview 배포에서는 아래를 먼저 본다.
 
 확인:
 
-1.  JWT_SECRET 이 올바르게 설정되었는지 확인
+1.  JWT\_SECRET 이 올바르게 설정되었는지 확인
 2.  로그인/회원가입 시 쿠키가 실제로 내려가는지 확인
 3.  운영 환경에서 secure 쿠키 처리 조건이 맞는지 확인
 
@@ -294,14 +294,14 @@ Preview 배포에서는 아래를 먼저 본다.
 
 확인:
 
-1.  KAKAO_LOCAL_REST_API_KEY 값 확인
+1.  KAKAO\_LOCAL\_REST\_API\_KEY 값 확인
 2.  호출이 브라우저가 아니라 서버 Route Handler 에서 이뤄지는지 확인
 3.  배포 로그에서 외부 호출 실패 메시지 확인
 
 ## 10\. 운영 메모
 
-1.  최종 배포 기준 앱은 로컬 최종 통합 작업 폴더 안의 저장소 루트 기준으로 본다.
-2.  .my_work 문서는 배포 대상이 아니라 작업 기준 문서이다.
+1.  최종 배포 기준 앱은 01\_sungeun15 로 고정한다.
+2.  .my\_work 문서는 배포 대상이 아니라 작업 기준 문서이다.
 3.  Engineering 문서에서 환경 변수 항목이 바뀌면 env.md 와 함께 같이 갱신한다.
 4.  Preview 가 정상이어도 실제 Production 환경 변수 누락 여부를 마지막에 한 번 더 확인한다.
 5.  문제가 생기면 Vercel Deployment Logs 와 Runtime Logs 를 먼저 확인한다.
