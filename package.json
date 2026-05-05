@@ -7,8 +7,10 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
-    "test:supabase": "node scripts/test-supabase-connection.mjs",
-    "test:supabase:table": "node scripts/test-supabase-table.mjs"
+    "type-check": "tsc --noEmit",
+    "test:supabase": "node scripts/test-supabase/connection.mjs",
+    "test:supabase:table": "node scripts/test-supabase/table.mjs",
+    "test:supabase:cleanup": "node scripts/test-supabase/cleanup.mjs"
   },
   "dependencies": {
     "next": "16.2.4",

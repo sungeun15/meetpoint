@@ -1,50 +1,8 @@
 import { spawnSync } from "node:child_process";
-import fs from "node:fs";
-import path from "node:path";
 import process from "node:process";
+import { loadEnvFile, requireEnv, resolveEnvPath } from "./lib/env-utils.mjs";
 
-function parseEnvFile(filePath) {
-    const content = fs.readFileSync(filePath, "utf8");
-
-    for (const rawLine of content.split(/\r?\n/)) {
-        const line = rawLine.trim();
-
-        if (!line || line.startsWith("#")) {
-            continue;
-        }
-
-        const separatorIndex = line.indexOf("=");
-
-        if (separatorIndex === -1) {
-            continue;
-        }
-
-        const key = line.slice(0, separatorIndex).trim();
-        let value = line.slice(separatorIndex + 1).trim();
-
-        if (
-            (value.startsWith('"') && value.endsWith('"')) ||
-            (value.startsWith("'") && value.endsWith("'"))
-        ) {
-            value = value.slice(1, -1);
-        }
-
-        if (!(key in process.env)) {
-            process.env[key] = value;
-        }
-    }
-}
-
-function requireEnv(name) {
-    const value = process.env[name];
-
-    if (!value) {
-        throw new Error(`${name} is not set`);
-    }
-
-    return value;
-}
-
+// psql 실행 결과를 표준 출력 그대로 받아서 사람이 바로 확인할 수 있게 한다.
 function runPsql(databaseUrl, sql) {
     const result = spawnSync(
         "psql",
@@ -68,16 +26,13 @@ function runPsql(databaseUrl, sql) {
 }
 
 async function run() {
-    const envPath = path.resolve(process.cwd(), ".env");
-
-    if (!fs.existsSync(envPath)) {
-        throw new Error(`.env file not found at ${envPath}`);
-    }
-
-    parseEnvFile(envPath);
+    const envPath = resolveEnvPath();
+    loadEnvFile(envPath);
 
     const databaseUrl = requireEnv("SUPABASE_DATABASE_URL");
     const tableName = "_meetpoint_script_test";
+
+    // 테이블이 없으면 만들고, 실행 흔적을 남길 테스트 데이터를 1건 적재한다.
     const createAndInsertSql = `
 create table if not exists public.${tableName} (
     id bigserial primary key,
@@ -86,13 +41,14 @@ create table if not exists public.${tableName} (
 );
 
 insert into public.${tableName} (note)
-values ('created via scripts/test-supabase-table.mjs')
+values ('created via scripts/test-supabase/table.mjs')
 returning id, note, created_at;
 
 select count(*) as row_count
 from public.${tableName};
 `;
 
+    // 마지막으로 실제 테이블이 남아 있는지 Postgres 메타 함수로 다시 확인한다.
     const verifySql = `
 select to_regclass('public.${tableName}') as table_name;
 `;
