@@ -6,7 +6,9 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "test:supabase": "node scripts/test-supabase-connection.mjs",
+    "test:supabase:table": "node scripts/test-supabase-table.mjs"
   },
   "dependencies": {
     "next": "16.2.4",
