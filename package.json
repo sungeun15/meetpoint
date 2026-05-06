@@ -8,6 +8,8 @@
     "start": "next start",
     "lint": "eslint",
     "type-check": "tsc --noEmit",
+    "test:kakao:sdk": "node scripts/test-kakao/sdk.mjs",
+    "test:kakao:local": "node scripts/test-kakao/local.mjs",
     "test:supabase": "node scripts/test-supabase/connection.mjs",
     "test:supabase:table": "node scripts/test-supabase/table.mjs",
     "test:supabase:cleanup": "node scripts/test-supabase/cleanup.mjs"
