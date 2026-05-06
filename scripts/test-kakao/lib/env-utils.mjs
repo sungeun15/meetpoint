@@ -2,6 +2,7 @@ import fs from "node:fs";
 import path from "node:path";
 import process from "node:process";
 
+// 테스트 스크립트는 실행 위치 기준으로 현재 프로젝트의 .env 파일을 찾는다.
 export function resolveEnvPath(cwd = process.cwd()) {
     return path.resolve(cwd, ".env");
 }
@@ -30,6 +31,7 @@ function parseEnvFile(filePath) {
         const key = line.slice(0, separatorIndex).trim();
         let value = line.slice(separatorIndex + 1).trim();
 
+        // 따옴표로 감싼 값도 그대로 사용할 수 있게 바깥쪽 따옴표만 제거한다.
         if (
             (value.startsWith('"') && value.endsWith('"')) ||
             (value.startsWith("'") && value.endsWith("'"))
