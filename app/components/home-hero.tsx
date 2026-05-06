@@ -34,7 +34,7 @@ export function HomeHero() {
                 </p>
 
                 <GradientActionLink
-                    href="/signup"
+                    href="/friends"
                     className={`${inter.className} mt-10 inline-flex w-full items-center justify-center rounded-[5px] bg-[#3d63ea] px-[30px] py-[19px] text-[14px] font-semibold leading-[14px] text-[#fafafa] shadow-[0px_4px_24.5px_rgba(0,0,0,0.15)] transition-transform hover:-translate-y-0.5 sm:mt-12 sm:w-auto md:mt-14 md:min-w-[220px] lg:mt-[68px]`}
                 >
                     {heroCopy.cta}
