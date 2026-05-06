@@ -1,151 +1,146 @@
 "use client";
 
-import Image from "next/image";
 import Link from "next/link";
-import { Abril_Fatface, Inter } from "next/font/google";
+import { Inter } from "next/font/google";
 import { usePathname } from "next/navigation";
 import { useState } from "react";
 
-const abrilFatface = Abril_Fatface({
-    weight: "400",
-    subsets: ["latin"],
-});
+import { BrandLogo } from "@/app/components/brand-logo";
+import { GradientActionLink } from "@/app/components/gradient-action-link";
 
 const inter = Inter({
-    weight: ["400", "500", "600"],
-    subsets: ["latin"],
+  weight: ["500", "600"],
+  subsets: ["latin"],
 });
 
 const navigationItems = [
-    { href: "/", label: "home" },
-    { href: "/features", label: "features" },
-    { href: "/about", label: "about us" },
+  { href: "/", label: "Home" },
+  { href: "/features", label: "Features" },
+  { href: "/about", label: "About us" },
 ];
 
-const headerConfigByPath: Record<string, { actionLabel: string; actionHref: string }> = {
-    "/login": { actionLabel: "sign up", actionHref: "/signup" },
-    "/signup": { actionLabel: "sign in", actionHref: "/login" },
+type HeaderConfig = {
+  hidden?: boolean;
+  actionLabel?: string;
+  actionHref?: string;
 };
 
-const gradientBackground =
-    "linear-gradient(90deg, #4e6ff7 0%, #6c63ff 50%, #7b5cff 100%)";
+const defaultHeaderConfig: HeaderConfig = {
+  actionLabel: "sign in",
+  actionHref: "/login",
+};
 
-function getDesktopNavigationLinkClass(isActive: boolean) {
-    return [
-        "transition-colors",
-        isActive ? "text-[#1f1f1f]" : "text-[#8f8f8f] hover:text-[#3f3f46]",
-    ].join(" ");
+const headerConfigByPath: Record<string, HeaderConfig> = {
+  "/login": {
+    actionLabel: "sign up",
+    actionHref: "/signup",
+  },
+  "/signup": {
+    actionLabel: "sign in",
+    actionHref: "/login",
+  },
+};
+
+function getDesktopNavigationLinkClass(isActive: boolean, fontClassName: string) {
+  return `${fontClassName} shrink-0 rounded-full px-3 py-2 text-[15px] font-medium leading-[1] text-[#4a5568] transition-colors hover:bg-[#f4f0ff] hover:text-[#1a202c] md:px-0 md:py-0 md:text-[16px] md:leading-[25px] ${isActive ? "bg-[#f4f0ff] text-[#24145f] md:bg-transparent" : ""}`;
 }
 
-function getMobileNavigationLinkClass(isActive: boolean) {
-    return [
-        "rounded-2xl px-4 py-3 text-base font-medium transition-colors lowercase",
-        isActive
-            ? "bg-[#3d63ea]/10 text-[#163091]"
-            : "text-[#4b5563] hover:bg-[#f4f4f5] hover:text-[#1f2937]",
-    ].join(" ");
+function getMobileNavigationLinkClass(isActive: boolean, fontClassName: string) {
+  return `${fontClassName} rounded-2xl px-4 py-3 text-[15px] font-medium leading-[1.2] transition-colors ${isActive ? "bg-[#f4f0ff] text-[#24145f]" : "text-[#4a5568] hover:bg-[#f8f5ff] hover:text-[#1a202c]"}`;
 }
 
 export function MainHeader() {
-    const pathname = usePathname();
-    const [isMenuOpen, setIsMenuOpen] = useState(false);
-    const headerConfig = headerConfigByPath[pathname] ?? {
-        actionLabel: "sign in",
-        actionHref: "/login",
-    };
+  const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const pathname = usePathname();
+  const headerConfig = pathname
+    ? { ...defaultHeaderConfig, ...headerConfigByPath[pathname] }
+    : defaultHeaderConfig;
 
-    return (
-        <header className="w-full border-b border-[#eee7ff] bg-[#faf7ff] shadow-[0_6px_24px_rgba(113,87,180,0.08)]">
-            <div className="mx-auto flex min-h-[84px] w-full max-w-[1440px] items-center justify-between px-4 sm:px-6 lg:px-8">
-                <div className="flex items-center gap-3 sm:gap-4 lg:gap-5">
-                    <Link href="/" className="flex items-center gap-[11px] text-[#1c1d1f]">
-                        <Image
-                            src="/imports/Frame1-2/6bbd22ff4d1f77ee42786bef5cc5ea8b1b2a6028.png"
-                            alt="MeetPoint pin logo"
-                            width={26}
-                            height={36}
-                            priority
-                            className="h-[32px] w-auto sm:h-[36px]"
-                        />
-                        <span className={`${abrilFatface.className} text-[28px] lowercase leading-none tracking-[0.01em] text-[#111827]`}>
-                            meetpoint
-                        </span>
-                    </Link>
+  if (headerConfig.hidden) {
+    return null;
+  }
 
-                    <nav className={`${inter.className} hidden items-center gap-6 text-[15px] font-medium lowercase lg:flex`}>
-                        {navigationItems.map(({ href, label }) => (
-                            <Link
-                                key={href}
-                                href={href}
-                                className={getDesktopNavigationLinkClass(pathname === href)}
-                            >
-                                {label}
-                            </Link>
-                        ))}
-                    </nav>
-                </div>
+  const actionHref = headerConfig.actionHref ?? defaultHeaderConfig.actionHref ?? "/login";
 
-                <div className="hidden items-center lg:flex">
-                    <Link
-                        href={headerConfig.actionHref}
-                        className={`${inter.className} inline-flex min-w-[108px] items-center justify-center rounded-[5px] px-6 py-[14px] text-[14px] font-semibold lowercase leading-none text-[#fafafa] shadow-[0px_4px_24.5px_rgba(0,0,0,0.15)] transition-transform hover:-translate-y-0.5`}
-                        style={{ background: gradientBackground }}
-                    >
-                        {headerConfig.actionLabel}
-                    </Link>
-                </div>
+  return (
+    <header className="w-full border-b border-black/5 bg-white shadow-[0px_4px_20px_rgba(0,0,0,0.08)]">
+      <div className="mx-auto flex w-full max-w-[1440px] items-center gap-3 px-4 py-3 sm:px-5 md:min-h-[84px] md:gap-6 md:py-0 lg:px-8">
+        <BrandLogo />
 
-                <button
-                    type="button"
-                    className="inline-flex h-11 w-11 items-center justify-center rounded-full border border-[#d9d2f3] bg-white text-[#2b2373] shadow-[0_8px_18px_rgba(84,65,140,0.08)] transition hover:border-[#c7bbea] hover:bg-[#f7f3ff] lg:hidden"
-                    aria-label={isMenuOpen ? "Close menu" : "Open menu"}
-                    aria-expanded={isMenuOpen}
-                    onClick={() => setIsMenuOpen((open) => !open)}
+        <nav className="hidden flex-1 items-center justify-center gap-8 md:flex lg:gap-20">
+          {navigationItems.map((navigationItem) => (
+            <Link
+              key={navigationItem.href}
+              href={navigationItem.href}
+              className={getDesktopNavigationLinkClass(pathname === navigationItem.href, inter.className)}
+            >
+              {navigationItem.label}
+            </Link>
+          ))}
+        </nav>
+
+        <div className="ml-auto hidden md:flex md:items-center">
+          <GradientActionLink
+            href={actionHref}
+            className={`${inter.className} inline-flex h-[48px] items-center justify-center rounded-[5px] px-[30px] text-[14px] font-medium leading-[14px] text-[#fafafa] shadow-[0px_4px_24.5px_rgba(0,0,0,0.15)] transition-opacity hover:opacity-95`}
+          >
+            {headerConfig.actionLabel}
+          </GradientActionLink>
+        </div>
+
+        <button
+          type="button"
+          aria-label={isMenuOpen ? "Close navigation menu" : "Open navigation menu"}
+          aria-expanded={isMenuOpen}
+          className="ml-auto inline-flex size-11 items-center justify-center rounded-full border border-[#d7dce5] bg-white text-[#24145f] shadow-[0px_6px_20px_rgba(36,20,95,0.12)] transition-colors hover:bg-[#f8f5ff] md:hidden"
+          onClick={() => setIsMenuOpen((current) => !current)}
+        >
+          <span className="relative block h-[18px] w-[20px]">
+            <span
+              className={`absolute left-0 top-[2px] h-[2px] w-full rounded-full bg-current transition-transform duration-200 ${
+                isMenuOpen ? "translate-y-[6px] rotate-45" : ""
+              }`}
+            />
+            <span
+              className={`absolute left-0 top-[8px] h-[2px] w-full rounded-full bg-current transition-opacity duration-200 ${
+                isMenuOpen ? "opacity-0" : "opacity-100"
+              }`}
+            />
+            <span
+              className={`absolute left-0 top-[14px] h-[2px] w-full rounded-full bg-current transition-transform duration-200 ${
+                isMenuOpen ? "-translate-y-[6px] -rotate-45" : ""
+              }`}
+            />
+          </span>
+        </button>
+      </div>
+
+      {isMenuOpen ? (
+        <div className="border-t border-black/5 bg-white px-4 py-4 shadow-[0px_12px_30px_rgba(0,0,0,0.08)] md:hidden">
+          <div className="mx-auto flex w-full max-w-[1440px] flex-col gap-3">
+            <nav className="flex flex-col gap-2">
+              {navigationItems.map((navigationItem) => (
+                <Link
+                  key={navigationItem.href}
+                  href={navigationItem.href}
+                  className={getMobileNavigationLinkClass(pathname === navigationItem.href, inter.className)}
+                  onClick={() => setIsMenuOpen(false)}
                 >
-                    <span className="relative block h-4 w-5">
-                        <span
-                            className={`absolute left-0 top-0 h-[2px] w-5 rounded-full bg-current transition ${isMenuOpen ? "translate-y-[7px] rotate-45" : ""
-                                }`}
-                        />
-                        <span
-                            className={`absolute left-0 top-[7px] h-[2px] w-5 rounded-full bg-current transition ${isMenuOpen ? "opacity-0" : ""
-                                }`}
-                        />
-                        <span
-                            className={`absolute left-0 top-[14px] h-[2px] w-5 rounded-full bg-current transition ${isMenuOpen ? "-translate-y-[7px] -rotate-45" : ""
-                                }`}
-                        />
-                    </span>
-                </button>
-            </div>
+                  {navigationItem.label}
+                </Link>
+              ))}
+            </nav>
 
-            {isMenuOpen ? (
-                <div className="border-t border-[#eee7ff] bg-[#fffdfd] px-4 py-4 shadow-[0_18px_38px_rgba(113,87,180,0.12)] lg:hidden">
-                    <div className="mx-auto flex max-w-[1440px] flex-col gap-4">
-                        <nav className={`${inter.className} flex flex-col gap-2`}>
-                            {navigationItems.map(({ href, label }) => (
-                                <Link
-                                    key={href}
-                                    href={href}
-                                    className={getMobileNavigationLinkClass(pathname === href)}
-                                    onClick={() => setIsMenuOpen(false)}
-                                >
-                                    {label}
-                                </Link>
-                            ))}
-                        </nav>
-
-                        <Link
-                            href={headerConfig.actionHref}
-                            className={`${inter.className} inline-flex w-full items-center justify-center rounded-[5px] px-5 py-[14px] text-[14px] font-semibold lowercase leading-none text-[#fafafa] shadow-[0px_4px_24.5px_rgba(0,0,0,0.15)] transition-transform hover:-translate-y-0.5`}
-                            style={{ background: gradientBackground }}
-                            onClick={() => setIsMenuOpen(false)}
-                        >
-                            {headerConfig.actionLabel}
-                        </Link>
-                    </div>
-                </div>
-            ) : null}
-        </header>
-    );
+            <GradientActionLink
+              href={actionHref}
+              onClick={() => setIsMenuOpen(false)}
+              className={`${inter.className} inline-flex h-[48px] items-center justify-center rounded-[5px] px-[30px] text-[14px] font-medium leading-[14px] text-[#fafafa] shadow-[0px_4px_24.5px_rgba(0,0,0,0.15)] transition-opacity hover:opacity-95`}
+            >
+              {headerConfig.actionLabel}
+            </GradientActionLink>
+          </div>
+        </div>
+      ) : null}
+    </header>
+  );
 }
