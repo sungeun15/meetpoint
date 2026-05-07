@@ -1,7 +1,7 @@
 import Image from "next/image";
 
-import { friendsGradientBackground } from "../friends/data";
 import { friendsBodyFont, friendsDisplayFont, friendsHeadingFont } from "../friends/fonts";
+import { ChatActionButton, ChatSectionCard } from "./chat-ui";
 import type { RecommendationCard } from "./types";
 
 type ChatStatusPanelsProps = {
@@ -23,7 +23,7 @@ export function ChatStatusPanels({
 }: ChatStatusPanelsProps) {
     return (
         <div className="grid gap-4 sm:gap-5 lg:grid-cols-[minmax(0,0.92fr)_minmax(0,1.08fr)] xl:gap-6">
-            <section className="rounded-[22px] bg-white px-4 py-5 shadow-[0px_18px_44px_rgba(52,41,104,0.14)] sm:rounded-[24px] sm:px-6 sm:py-6 lg:rounded-[26px] lg:px-6 xl:px-7">
+            <ChatSectionCard className="px-4 py-5 sm:px-6 sm:py-6 lg:px-6 xl:px-7">
                 <div className="space-y-3">
                     <h3 className={`${friendsHeadingFont.className} text-[22px] font-bold text-[#111827] sm:text-[26px] lg:text-[28px]`}>
                         위치 상태
@@ -46,17 +46,15 @@ export function ChatStatusPanels({
                     </div>
                 </div>
 
-                <button
-                    type="button"
+                <ChatActionButton
                     onClick={onShareLocation}
-                    className={`${friendsHeadingFont.className} mt-5 inline-flex min-h-[48px] w-full cursor-pointer items-center justify-center rounded-[12px] border-[3px] border-white px-6 py-2.5 text-[17px] font-bold text-white shadow-[0px_10px_24px_rgba(108,92,231,0.18)] transition-opacity hover:opacity-95 sm:min-h-[52px] sm:text-[18px]`}
-                    style={{ backgroundImage: friendsGradientBackground }}
+                    className={`${friendsHeadingFont.className} mt-5 min-h-[48px] w-full rounded-[12px] px-6 py-2.5 text-[17px] font-bold sm:min-h-[52px] sm:text-[18px]`}
                 >
                     위치 공유하기
-                </button>
-            </section>
+                </ChatActionButton>
+            </ChatSectionCard>
 
-            <section className="relative overflow-hidden rounded-[22px] bg-[#dcd2ff] px-4 py-5 shadow-[0px_18px_44px_rgba(52,41,104,0.12)] sm:rounded-[24px] sm:px-6 sm:py-6 lg:rounded-[26px] lg:px-6 xl:px-7">
+            <ChatSectionCard tone="accent" className="relative overflow-hidden px-4 py-5 sm:px-6 sm:py-6 lg:px-6 xl:px-7">
                 <Image
                     alt="Background pattern"
                     src="/imports/Frame3/background-pattern.svg"
@@ -76,13 +74,13 @@ export function ChatStatusPanels({
                             </p>
                         </div>
 
-                        <button
-                            type="button"
+                        <ChatActionButton
+                            variant="accent"
                             onClick={onRecommend}
-                            className={`${friendsHeadingFont.className} inline-flex min-h-[52px] w-full cursor-pointer items-center justify-center rounded-[16px] border border-white/50 bg-[linear-gradient(198.712deg,#6675f7_0%,#57007b_100%)] px-6 py-3 text-[17px] font-bold leading-none text-white shadow-[0px_16px_32px_rgba(87,0,123,0.22)] transition-[transform,box-shadow,opacity] duration-200 ease-out hover:-translate-y-[1px] hover:shadow-[0px_20px_36px_rgba(87,0,123,0.26)] hover:opacity-100 sm:min-h-[56px] sm:w-auto sm:px-7 sm:py-3.5 sm:text-[18px]`}
+                            className={`${friendsHeadingFont.className} min-h-[52px] w-full rounded-[16px] px-6 py-3 text-[17px] font-bold leading-none sm:min-h-[56px] sm:w-auto sm:px-7 sm:py-3.5 sm:text-[18px]`}
                         >
                             추천 시작하기
-                        </button>
+                        </ChatActionButton>
                     </div>
 
                     {hasRecommendations ? (
@@ -122,7 +120,7 @@ export function ChatStatusPanels({
                         </div>
                     )}
                 </div>
-            </section>
+            </ChatSectionCard>
         </div>
     );
 }

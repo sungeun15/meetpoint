@@ -1,8 +1,8 @@
 import type { FormEvent } from "react";
 
-import { friendsGradientBackground } from "../friends/data";
 import { friendsBodyFont, friendsDisplayFont, friendsHeadingFont } from "../friends/fonts";
 import type { FriendItem } from "../friends/types";
+import { ChatActionButton, ChatSectionCard } from "./chat-ui";
 import type { ChatMessage } from "./types";
 
 type ChatConversationPanelProps = {
@@ -58,7 +58,7 @@ export function ChatConversationPanel({
     feedbackMessage,
 }: ChatConversationPanelProps) {
     return (
-        <section className="overflow-hidden rounded-[22px] bg-white shadow-[0px_18px_44px_rgba(52,41,104,0.14)] sm:rounded-[24px] lg:rounded-[26px]">
+        <ChatSectionCard className="overflow-hidden">
             <div className="border-b border-[#ebe8fb] px-4 py-3 sm:px-6 sm:py-4 lg:px-8">
                 <p className={`${friendsDisplayFont.className} text-center text-[15px] text-[#4b5563] sm:text-[17px]`}>
                     ---오늘---
@@ -98,13 +98,12 @@ export function ChatConversationPanel({
                         className={`${friendsDisplayFont.className} h-12 flex-1 rounded-[12px] border-2 border-[#d1d5db] bg-white px-4 text-[15px] text-[#111827] outline-none transition focus:border-[#8b7cf6] focus:shadow-[0_0_0_4px_rgba(108,92,231,0.08)] sm:h-[54px] sm:text-[17px] lg:text-[20px]`}
                     />
 
-                    <button
+                    <ChatActionButton
                         type="submit"
-                        className={`${friendsHeadingFont.className} inline-flex min-h-[48px] w-full cursor-pointer items-center justify-center rounded-[12px] border-[3px] border-white px-6 py-2.5 text-[17px] font-bold text-white shadow-[0px_10px_24px_rgba(108,92,231,0.18)] transition-opacity hover:opacity-95 sm:min-h-[54px] sm:text-[18px] md:w-[136px]`}
-                        style={{ backgroundImage: friendsGradientBackground }}
+                        className={`${friendsHeadingFont.className} min-h-[48px] w-full rounded-[12px] px-6 py-2.5 text-[17px] font-bold sm:min-h-[54px] sm:text-[18px] md:w-[136px]`}
                     >
                         전송
-                    </button>
+                    </ChatActionButton>
                 </form>
 
                 {feedbackMessage ? (
@@ -113,6 +112,6 @@ export function ChatConversationPanel({
                     </p>
                 ) : null}
             </div>
-        </section>
+        </ChatSectionCard>
     );
 }
