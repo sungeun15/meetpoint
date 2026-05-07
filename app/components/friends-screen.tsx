@@ -65,6 +65,7 @@ export function FriendsScreen() {
                     filteredFriends={filteredFriends}
                     selectedFriendId={selectedFriendId}
                     onSelectFriend={setSelectedFriendId}
+                    getFriendHref={(friendId) => `/chat?friend=${friendId}`}
                 />
 
                 <FriendsContent
