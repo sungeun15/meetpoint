@@ -2,7 +2,6 @@
 
 import type { FormEvent } from "react";
 import { useMemo, useState } from "react";
-import { useSearchParams } from "next/navigation";
 
 import { initialFriends } from "../friends/data";
 import { buildRecommendationCards, initialChatMessages } from "./data";
@@ -21,9 +20,7 @@ function formatCurrentTime() {
     }).format(new Date());
 }
 
-export function useChatScreenState() {
-    const searchParams = useSearchParams();
-    const requestedFriendId = searchParams.get("friend");
+export function useChatScreenState(requestedFriendId: string | null = null) {
     const [friendSearch, setFriendSearch] = useState("");
     const [selectedFriendId, setSelectedFriendId] = useState(initialFriends[0]?.id ?? "");
     const [messages, setMessages] = useState<ChatMessage[]>(initialChatMessages);
