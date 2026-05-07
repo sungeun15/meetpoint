@@ -1,3 +1,5 @@
+import Link from "next/link";
+
 import { friendsBodyFont, friendsDisplayFont, friendsHeadingFont } from "./fonts";
 import { getFriendInitial } from "./data";
 import type { FriendItem } from "./types";
@@ -9,6 +11,7 @@ type FriendsSidebarProps = {
     filteredFriends: FriendItem[];
     selectedFriendId: string;
     onSelectFriend: (friendId: string) => void;
+    getFriendHref?: (friendId: string) => string;
 };
 
 export function FriendsSidebar({
@@ -17,6 +20,7 @@ export function FriendsSidebar({
     filteredFriends,
     selectedFriendId,
     onSelectFriend,
+    getFriendHref,
 }: FriendsSidebarProps) {
     return (
         <aside className="rounded-[22px] bg-white px-4 py-4 shadow-[0px_18px_44px_rgba(52,41,104,0.14)] sm:rounded-[24px] sm:px-5 sm:py-5 lg:flex lg:h-full lg:flex-col lg:rounded-[26px] lg:px-6 lg:py-6">
@@ -40,17 +44,13 @@ export function FriendsSidebar({
                 {filteredFriends.length > 0 ? (
                     filteredFriends.map((friend) => {
                         const isSelected = friend.id === selectedFriendId;
-
-                        return (
-                            <button
-                                key={friend.id}
-                                type="button"
-                                onClick={() => onSelectFriend(friend.id)}
-                                className={`flex w-full cursor-pointer items-center gap-3 rounded-[16px] border bg-white px-3.5 py-3 text-left transition-all duration-200 sm:gap-4 sm:rounded-[18px] sm:px-4 sm:py-4 ${isSelected
-                                    ? "border-[#6c5ce7] bg-[#f4f0ff] shadow-[0px_12px_30px_rgba(108,92,231,0.12)]"
-                                    : "border-black/10 hover:border-[#c7bcff] hover:bg-[#faf8ff]"
-                                    }`}
-                            >
+                        const friendHref = getFriendHref?.(friend.id);
+                        const itemClassName = `flex w-full cursor-pointer items-center gap-3 rounded-[16px] border bg-white px-3.5 py-3 text-left transition-all duration-200 sm:gap-4 sm:rounded-[18px] sm:px-4 sm:py-4 ${isSelected
+                            ? "border-[#6c5ce7] bg-[#f4f0ff] shadow-[0px_12px_30px_rgba(108,92,231,0.12)]"
+                            : "border-black/10 hover:border-[#c7bcff] hover:bg-[#faf8ff]"
+                            }`;
+                        const itemContent = (
+                            <>
                                 <div className="flex h-[44px] w-[44px] shrink-0 items-center justify-center rounded-full bg-[#d9d9d9] text-[18px] text-[#111827] sm:h-[48px] sm:w-[48px] sm:text-[20px] lg:h-[52px] lg:w-[52px] lg:text-[22px]">
                                     <span className={`${friendsDisplayFont.className} leading-none`}>
                                         {getFriendInitial(friend.nickname)}
@@ -65,6 +65,30 @@ export function FriendsSidebar({
                                     </p>
                                 </div>
                                 <span className="shrink-0 text-[24px] leading-none text-[#6c5ce7] sm:text-[26px] lg:text-[28px]">›</span>
+                            </>
+                        );
+
+                        if (friendHref) {
+                            return (
+                                <Link
+                                    key={friend.id}
+                                    href={friendHref}
+                                    onClick={() => onSelectFriend(friend.id)}
+                                    className={itemClassName}
+                                >
+                                    {itemContent}
+                                </Link>
+                            );
+                        }
+
+                        return (
+                            <button
+                                key={friend.id}
+                                type="button"
+                                onClick={() => onSelectFriend(friend.id)}
+                                className={itemClassName}
+                            >
+                                {itemContent}
                             </button>
                         );
                     })
