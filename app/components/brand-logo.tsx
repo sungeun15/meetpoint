@@ -24,7 +24,7 @@ export function BrandLogo({ className = "" }: BrandLogoProps) {
                     className="-scale-y-100 rotate-180 object-cover"
                 />
             </div>
-            <span className={`${abrilFatface.className} text-[24px] leading-none`}>
+            <span className={`${abrilFatface.className} text-[26px] leading-none sm:text-[28px]`}>
                 meetpoint
             </span>
         </Link>
