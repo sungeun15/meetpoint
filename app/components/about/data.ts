@@ -14,25 +14,37 @@ export const aboutValues: AboutValue[] = [
         icon: "🔗",
         title: "Integration",
         description:
-            "All essential features like chat, location sharing, and recommendations are connected in one simple flow.",
+            "Chat, current location sharing, departure selection, and recommendation feedback are connected in one simple flow.",
     },
     {
         icon: "⚖️",
         title: "Fairness",
         description:
-            "Meeting points and place suggestions are designed to feel balanced for both people, not just convenient for one side.",
+            "Recommendations are designed to feel balanced for both people, not just convenient for one side.",
+    },
+    {
+        icon: "🧭",
+        title: "Flexibility",
+        description:
+            "Users can plan a spontaneous meetup with current positions or prepare a later meetup with chosen departure points.",
     },
     {
         icon: "✨",
         title: "Simplicity",
         description:
-            "The product focuses on a lightweight flow so users can start coordinating quickly without unnecessary steps.",
+            "The product keeps the core planning flow lightweight so users can coordinate quickly without unnecessary steps.",
+    },
+    {
+        icon: "🧩",
+        title: "Practicality",
+        description:
+            "Recommendations are shaped to feel usable in real meetup situations, not just mathematically centered on the map.",
     },
     {
         icon: "🎯",
         title: "Clarity",
         description:
-            "Users can easily understand the planning flow from location sharing to recommendation results.",
+            "Users can easily understand the active mode, category, and recommendation basis from input to result.",
     },
 ];
 

@@ -7,38 +7,38 @@ export type FeatureCardItem = {
 export const featureCards: FeatureCardItem[] = [
     {
         icon: "📍",
-        title: "Location Sharing",
+        title: "Now or Later Mode",
         description:
-            "Save your current location only when you choose to share it, keeping the flow manual instead of real-time tracking.",
+            "Choose between a spontaneous meetup with current locations or a later plan with selected departure points.",
+    },
+    {
+        icon: "🧭",
+        title: "Departure Point Selection",
+        description:
+            "In later mode, set a starting point with address search, map pin placement, or a saved departure location.",
     },
     {
         icon: "💬",
         title: "Comment-style Chat",
         description:
-            "Coordinate plans with a simple chat space that keeps conversations lightweight and easy to follow.",
-    },
-    {
-        icon: "🗺️",
-        title: "Midpoint Calculation",
-        description:
-            "Calculate the midpoint from the average of two coordinates and use it as the starting point for meetup planning.",
+            "Keep the meetup conversation lightweight with a simple chat flow tied directly to the selected friend.",
     },
     {
         icon: "🎯",
-        title: "Fair Place Recommendation",
+        title: "Category-based Recommendation",
         description:
-            "Rank places around the midpoint with distance and fairness scores, then return the top three meetup options.",
+            "Request cafe, meal, or fun recommendations so the result fits the purpose of the meetup instead of distance alone.",
     },
     {
-        icon: "👥",
-        title: "Easy Friend Addition",
+        icon: "⚖️",
+        title: "Fair Scoring Logic",
         description:
-            "Add friends quickly with a nickname-based flow so you can start chatting and sharing locations faster.",
+            "Rank places with distance balance, category fit, and area vitality to surface options that feel fair and realistic.",
     },
     {
-        icon: "🔗",
-        title: "Integrated Experience",
+        icon: "🗺️",
+        title: "Map and Summary Feedback",
         description:
-            "See your location, your friend's location, the midpoint, and recommendation results together in one connected flow.",
+            "Review shared locations, the midpoint, recommendation cards, and the active planning criteria in one connected screen.",
     },
 ];

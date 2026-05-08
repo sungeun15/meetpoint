@@ -17,12 +17,12 @@ export function AboutContent() {
                 <h1
                     className={`${aboutPoppins.className} mt-5 text-[clamp(2.3rem,9vw,4rem)] leading-[1.08] tracking-[-0.03em] text-[#24145f] sm:mt-6`}
                 >
-                    One place to plan fair meetups.
+                    One flow for fair meetups, whether you meet now or later.
                 </h1>
                 <p
                     className={`${aboutInter.className} mt-5 max-w-[48rem] text-[16px] leading-[1.8] text-[#4a5568] sm:mt-6 sm:text-[19px] lg:text-[22px]`}
                 >
-                    MeetPoint simplifies meetup planning by combining location sharing, chat, and midpoint-based recommendations into one connected experience.
+                    MeetPoint combines chat, current location sharing, departure point selection, and fair recommendation logic into one connected meetup planning experience.
                 </p>
             </div>
 
@@ -32,17 +32,20 @@ export function AboutContent() {
                     titleClassName="text-[28px] leading-[1.12] text-[#1a202c] sm:text-[32px]"
                 />
                 <p className={`${aboutInter.className} mt-4 text-[16px] leading-[1.9] text-[#4a5568] sm:text-[17px] lg:text-[18px]`}>
-                    Planning a meetup should not mean switching between chat apps, maps, and place search tools. That fragmented flow slows people down and makes even simple plans feel harder than they should be.
+                    Planning a meetup should not require switching between chat apps, maps, and place search tools. That fragmented flow slows people down and makes even simple plans harder than they should be.
                 </p>
                 <p className={`${aboutInter.className} mt-4 text-[16px] leading-[1.9] text-[#4a5568] sm:text-[17px] lg:text-[18px]`}>
-                    MeetPoint brings those steps together so users can share locations, compare travel balance, and choose a suitable place from a single product flow.
+                    MeetPoint brings those steps together so users can talk with a friend, choose whether they are meeting now or later, set the right departure inputs, and compare suitable places from a single product flow.
+                </p>
+                <p className={`${aboutInter.className} mt-4 text-[16px] leading-[1.9] text-[#4a5568] sm:text-[17px] lg:text-[18px]`}>
+                    That mission is reflected in six product values: integration, fairness, flexibility, simplicity, practicality, and clarity.
                 </p>
             </div>
 
             <div className="mt-10 sm:mt-12 lg:mt-14">
                 <SectionHeading
                     title="Core Values"
-                    description="The product design is guided by a small set of principles that keep planning fast, understandable, and fair."
+                    description="Six product values guide the experience so meetup planning stays connected, balanced, flexible, lightweight, practical, and easy to understand."
                     centered
                 />
 
@@ -68,7 +71,7 @@ export function AboutContent() {
             <div className="mt-10 flex flex-col items-center rounded-[22px] bg-white px-5 py-7 text-center shadow-[0px_14px_36px_rgba(0,0,0,0.08)] ring-1 ring-black/5 sm:mt-12 sm:rounded-[24px] sm:px-8 sm:py-8 lg:px-10 lg:py-10">
                 <SectionHeading
                     title="Ready to Get Started?"
-                    description="Start with signup, connect with friends, and plan better meetups with location-aware recommendations."
+                    description="Start with signup, connect with friends, and plan meetups with mode-aware, category-aware recommendations."
                     centered
                     titleClassName="text-[28px] leading-[1.12] text-[#1a202c] sm:text-[32px]"
                     descriptionClassName="mt-4 max-w-[38rem] text-[16px] leading-[1.8] text-[#4a5568] sm:text-[17px]"
@@ -77,7 +80,7 @@ export function AboutContent() {
                     href="/signup"
                     className={`${aboutInter.className} mt-6 inline-flex min-h-[56px] w-full cursor-pointer items-center justify-center rounded-[10px] px-6 py-4 text-[15px] font-semibold text-[#fafafa] shadow-[0px_10px_28px_rgba(36,20,95,0.18)] transition-transform hover:-translate-y-0.5 sm:w-auto sm:min-w-[240px] sm:px-8 sm:text-[16px]`}
                 >
-                    Join MeetPoint Today
+                    Join MeetPoint and Plan Better
                 </GradientActionLink>
             </div>
         </section>
