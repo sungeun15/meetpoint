@@ -57,7 +57,7 @@ JWT는 서버가 발급하는 로그인 확인표라고 생각하면 쉽다.
 ### 4.2 우리 프로젝트에서 좋은 점
 
 1.  시작 페이지인 app/page.tsx 에서 로그인 여부를 나누기 쉽다.
-2.  보호 페이지인 app/main/page.tsx 에서 서버 기준으로 바로 이동 처리를 할 수 있다.
+2.  보호 페이지인 app/friends/page.tsx 와 app/chat/page.tsx 에서 서버 기준으로 바로 이동 처리를 할 수 있다.
 3.  app/api/friends, app/api/messages, app/api/location 같은 API에 같은 인증 규칙을 붙이기 쉽다.
 
 ---
@@ -69,18 +69,22 @@ MeetPoint MVP에서 JWT와 직접 관련 있는 위치는 아래와 같다.
 1.  app/api/auth/signup/route.ts
 2.  app/api/auth/login/route.ts
 3.  app/api/auth/logout/route.ts
-4.  app/page.tsx
-5.  app/main/page.tsx
-6.  lib/auth/session.ts
+4.  app/login/page.tsx
+5.  app/signup/page.tsx
+6.  app/friends/page.tsx
+7.  app/chat/page.tsx
+8.  lib/auth/session.ts
 
 각 파일이 하는 일을 짧게 정리하면 다음과 같다.
 
 1.  signup: 회원가입 후 JWT를 만든다.
 2.  login: 로그인 성공 후 JWT를 만든다.
 3.  logout: JWT 쿠키를 지운다.
-4.  page.tsx: 이미 로그인 상태면 메인 화면으로 보낸다.
-5.  main/page.tsx: JWT가 없으면 로그인 화면으로 보낸다.
-6.  session.ts: JWT 만들기, 검사하기, 쿠키 설정을 공통 처리한다.
+4.  login/page.tsx: 로그인 화면 진입점이며 성공 후 /friends 로 보낸다.
+5.  signup/page.tsx: 회원가입 화면 진입점이며 성공 후 /friends 로 보낸다.
+6.  friends/page.tsx: JWT가 없으면 public 화면으로 보낸다.
+7.  chat/page.tsx: JWT가 없으면 public 화면으로 보낸다.
+8.  session.ts: JWT 만들기, 검사하기, 쿠키 설정을 공통 처리한다.
 
 ---
 
@@ -110,7 +114,7 @@ MeetPoint MVP에서 JWT와 직접 관련 있는 위치는 아래와 같다.
   -> password_hash 저장
   -> JWT 생성
   -> meetpoint_auth 쿠키 발급
-  -> 메인 화면으로 이동
+  -> /friends 로 이동
 ```
 
 ### 6.3 로그아웃 흐름
@@ -131,10 +135,10 @@ MeetPoint MVP에서 JWT와 직접 관련 있는 위치는 아래와 같다.
 
 ```
 브라우저
-  -> /main 접근
+  -> /friends 또는 /chat 접근
   -> 서버가 쿠키 확인
   -> JWT 유효: 페이지 렌더링
-  -> JWT 없음 또는 만료: / 로 redirect
+  -> JWT 없음 또는 만료: / 또는 /login 으로 redirect
 ```
 
 ---
@@ -354,7 +358,7 @@ export async function POST() {
 1.  로그아웃은 JWT가 없어도 성공으로 처리한다.
 2.  그래서 프론트엔드도 복잡하게 예외를 나눌 필요가 없다.
 
-### 8.4 app/main/page.tsx 예시
+### 8.4 app/friends/page.tsx 예시
 
 보호 페이지는 서버가 먼저 쿠키를 확인하고, 로그인 상태가 아니면 redirect 한다.
 
@@ -362,16 +366,16 @@ export async function POST() {
 import { redirect } from "next/navigation";
 import { getCurrentUserFromCookie } from "@/lib/auth/session";
 
-export default async function MainPage() {
+export default async function FriendsPage() {
   const currentUser = await getCurrentUserFromCookie();
 
   if (!currentUser) {
-    redirect("/");
+    redirect("/login");
   }
 
   return (
     <main>
-      <h1>MeetPoint Main</h1>
+      <h1>MeetPoint Friends</h1>
       <p>{currentUser.nickname} 님 환영합니다.</p>
     </main>
   );
