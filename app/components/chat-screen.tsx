@@ -21,12 +21,27 @@ export function ChatScreen({ requestedFriendId = null }: ChatScreenProps) {
         myLocationStatus,
         friendLocationStatus,
         lastSharedAt,
+        meetingMode,
+        selectedCategory,
+        departureInputMethod,
+        departureSearchQuery,
+        savedDepartures,
+        selectedSavedDepartureId,
+        selectedDepartureLabel,
+        recommendationSummary,
+        canRecommend,
         hasRecommendations,
         recommendationCards,
         handleSelectFriend,
         handleDraftMessageChange,
         handleSendMessage,
         handleShareLocation,
+        handleMeetingModeChange,
+        handleCategoryChange,
+        handleDepartureInputMethodChange,
+        handleDepartureSearchQueryChange,
+        handlePinnedDepartureSelect,
+        handleSavedDepartureSelect,
         handleRecommend,
     } = useChatScreenState(requestedFriendId);
 
@@ -52,7 +67,22 @@ export function ChatScreen({ requestedFriendId = null }: ChatScreenProps) {
                     myLocationStatus={myLocationStatus}
                     friendLocationStatus={friendLocationStatus}
                     lastSharedAt={lastSharedAt}
+                    meetingMode={meetingMode}
+                    selectedCategory={selectedCategory}
+                    departureInputMethod={departureInputMethod}
+                    departureSearchQuery={departureSearchQuery}
+                    savedDepartures={savedDepartures}
+                    selectedSavedDepartureId={selectedSavedDepartureId}
+                    selectedDepartureLabel={selectedDepartureLabel}
+                    recommendationSummary={recommendationSummary}
+                    canRecommend={canRecommend}
                     onShareLocation={handleShareLocation}
+                    onMeetingModeChange={handleMeetingModeChange}
+                    onCategoryChange={handleCategoryChange}
+                    onDepartureInputMethodChange={handleDepartureInputMethodChange}
+                    onDepartureSearchQueryChange={handleDepartureSearchQueryChange}
+                    onPinnedDepartureSelect={handlePinnedDepartureSelect}
+                    onSavedDepartureSelect={handleSavedDepartureSelect}
                     onRecommend={handleRecommend}
                     hasRecommendations={hasRecommendations}
                     recommendationCards={recommendationCards}

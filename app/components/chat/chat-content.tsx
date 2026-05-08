@@ -1,7 +1,15 @@
 import type { FormEvent } from "react";
 
 import type { FriendItem } from "../friends/types";
-import type { ChatMessage, RecommendationCard } from "./types";
+import type {
+    ChatMessage,
+    DepartureInputMethod,
+    MeetingMode,
+    RecommendationCard,
+    RecommendationCategory,
+    RecommendationSummary,
+    SavedDeparture,
+} from "./types";
 import { ChatConversationPanel } from "./chat-conversation-panel";
 import { ChatHeaderCard } from "./chat-header-card";
 import { ChatStatusPanels } from "./chat-status-panels";
@@ -16,7 +24,22 @@ type ChatContentProps = {
     myLocationStatus: string;
     friendLocationStatus: string;
     lastSharedAt: string | null;
+    meetingMode: MeetingMode;
+    selectedCategory: RecommendationCategory;
+    departureInputMethod: DepartureInputMethod;
+    departureSearchQuery: string;
+    savedDepartures: SavedDeparture[];
+    selectedSavedDepartureId: string;
+    selectedDepartureLabel: string | null;
+    recommendationSummary: RecommendationSummary;
+    canRecommend: boolean;
     onShareLocation: () => void;
+    onMeetingModeChange: (nextMode: MeetingMode) => void;
+    onCategoryChange: (nextCategory: RecommendationCategory) => void;
+    onDepartureInputMethodChange: (nextMethod: DepartureInputMethod) => void;
+    onDepartureSearchQueryChange: (nextQuery: string) => void;
+    onPinnedDepartureSelect: () => void;
+    onSavedDepartureSelect: (departureId: string) => void;
     onRecommend: () => void;
     hasRecommendations: boolean;
     recommendationCards: RecommendationCard[];
@@ -32,7 +55,22 @@ export function ChatContent({
     myLocationStatus,
     friendLocationStatus,
     lastSharedAt,
+    meetingMode,
+    selectedCategory,
+    departureInputMethod,
+    departureSearchQuery,
+    savedDepartures,
+    selectedSavedDepartureId,
+    selectedDepartureLabel,
+    recommendationSummary,
+    canRecommend,
     onShareLocation,
+    onMeetingModeChange,
+    onCategoryChange,
+    onDepartureInputMethodChange,
+    onDepartureSearchQueryChange,
+    onPinnedDepartureSelect,
+    onSavedDepartureSelect,
     onRecommend,
     hasRecommendations,
     recommendationCards,
@@ -58,6 +96,21 @@ export function ChatContent({
                 myLocationStatus={myLocationStatus}
                 friendLocationStatus={friendLocationStatus}
                 onShareLocation={onShareLocation}
+                meetingMode={meetingMode}
+                selectedCategory={selectedCategory}
+                departureInputMethod={departureInputMethod}
+                departureSearchQuery={departureSearchQuery}
+                savedDepartures={savedDepartures}
+                selectedSavedDepartureId={selectedSavedDepartureId}
+                selectedDepartureLabel={selectedDepartureLabel}
+                recommendationSummary={recommendationSummary}
+                canRecommend={canRecommend}
+                onMeetingModeChange={onMeetingModeChange}
+                onCategoryChange={onCategoryChange}
+                onDepartureInputMethodChange={onDepartureInputMethodChange}
+                onDepartureSearchQueryChange={onDepartureSearchQueryChange}
+                onPinnedDepartureSelect={onPinnedDepartureSelect}
+                onSavedDepartureSelect={onSavedDepartureSelect}
                 onRecommend={onRecommend}
                 hasRecommendations={hasRecommendations}
                 recommendationCards={recommendationCards}
