@@ -7,8 +7,10 @@ import { initialFriends } from "../friends/data";
 import { buildRecommendationCards, buildRecommendationSummary, initialChatMessages } from "./data";
 import type {
     ChatMessage,
+    DepartureSearchResult,
     DepartureInputMethod,
     MeetingMode,
+    RecommendationViewState,
     RecommendationCategory,
     SavedDeparture,
 } from "./types";
@@ -39,6 +41,24 @@ const initialSavedDepartures: SavedDeparture[] = [
     },
 ];
 
+const mockDepartureSearchResults: DepartureSearchResult[] = [
+    {
+        id: "konkuk-gate-2",
+        label: "건대입구역 2번 출구",
+        description: "지하철 출구 기준 · 도보 약속에 자주 쓰는 출발 위치",
+    },
+    {
+        id: "seongsu-exit-3",
+        label: "성수역 3번 출구",
+        description: "지도 핀 없이 빠르게 선택하는 역 출발 위치",
+    },
+    {
+        id: "wangsimni-square",
+        label: "왕십리역 광장",
+        description: "환승 기준으로 만나기 좋은 대표 위치",
+    },
+];
+
 function formatCurrentTime() {
     return new Intl.DateTimeFormat("ko-KR", {
         hour: "2-digit",
@@ -61,6 +81,8 @@ export function useChatScreenState(requestedFriendId: string | null = null) {
     const [departureSearchQuery, setDepartureSearchQuery] = useState("건대입구역 2번 출구");
     const [selectedSavedDepartureId, setSelectedSavedDepartureId] = useState(initialSavedDepartures[0]?.id ?? "");
     const [pinnedDepartureLabel, setPinnedDepartureLabel] = useState("");
+    const [recommendationViewState, setRecommendationViewState] = useState<RecommendationViewState>("idle");
+    const [isSavedDepartureEmptyPreview, setIsSavedDepartureEmptyPreview] = useState(false);
 
     const activeFriendId = initialFriends.some((friend) => friend.id === requestedFriendId)
         ? requestedFriendId ?? selectedFriendId
@@ -88,7 +110,18 @@ export function useChatScreenState(requestedFriendId: string | null = null) {
 
     const hasRecommendations = recommendedFriendIds.includes(activeFriendId);
     const lastSharedAt = sharedLocationTimestamps[activeFriendId] ?? null;
-    const selectedSavedDeparture = initialSavedDepartures.find((departure) => departure.id === selectedSavedDepartureId) ?? null;
+    const availableSavedDepartures = isSavedDepartureEmptyPreview ? [] : initialSavedDepartures;
+    const selectedSavedDeparture = availableSavedDepartures.find((departure) => departure.id === selectedSavedDepartureId) ?? null;
+    const normalizedDepartureSearchQuery = departureSearchQuery.trim().toLowerCase();
+    const departureSearchResults = useMemo(
+        () => mockDepartureSearchResults.filter((result) => result.label.toLowerCase().includes(normalizedDepartureSearchQuery)),
+        [normalizedDepartureSearchQuery],
+    );
+    const departureSearchState: "idle" | "results" | "empty" = normalizedDepartureSearchQuery.length === 0
+        ? "idle"
+        : departureSearchResults.length > 0
+            ? "results"
+            : "empty";
     const selectedDepartureLabel = meetingMode === "later"
         ? (() => {
             if (departureInputMethod === "search") {
@@ -112,6 +145,7 @@ export function useChatScreenState(requestedFriendId: string | null = null) {
         [meetingMode, selectedCategory, selectedDepartureLabel, selectedFriend],
     );
     const canRecommend = meetingMode === "now" ? Boolean(lastSharedAt) : Boolean(selectedDepartureLabel);
+    const hasRecommendationResults = recommendationViewState === "results" && hasRecommendations;
 
     const myLocationStatus = lastSharedAt
         ? `내 위치를 ${lastSharedAt}에 공유했어요. 추천 정확도를 높일 준비가 됐어요.`
@@ -123,6 +157,8 @@ export function useChatScreenState(requestedFriendId: string | null = null) {
     function handleSelectFriend(friendId: string) {
         setSelectedFriendId(friendId);
         setFeedbackMessage(null);
+        setRecommendationViewState("idle");
+        setIsSavedDepartureEmptyPreview(false);
     }
 
     function handleDraftMessageChange(nextValue: string) {
@@ -170,6 +206,7 @@ export function useChatScreenState(requestedFriendId: string | null = null) {
     function handleMeetingModeChange(nextMode: MeetingMode) {
         setMeetingMode(nextMode);
         setFeedbackMessage(null);
+        setRecommendationViewState("idle");
     }
 
     function handleCategoryChange(nextCategory: RecommendationCategory) {
@@ -180,6 +217,10 @@ export function useChatScreenState(requestedFriendId: string | null = null) {
     function handleDepartureInputMethodChange(nextMethod: DepartureInputMethod) {
         setDepartureInputMethod(nextMethod);
         setFeedbackMessage(null);
+
+        if (nextMethod !== "saved") {
+            setIsSavedDepartureEmptyPreview(false);
+        }
     }
 
     function handleDepartureSearchQueryChange(nextQuery: string) {
@@ -195,8 +236,39 @@ export function useChatScreenState(requestedFriendId: string | null = null) {
 
     function handleSavedDepartureSelect(departureId: string) {
         setDepartureInputMethod("saved");
+        setIsSavedDepartureEmptyPreview(false);
         setSelectedSavedDepartureId(departureId);
         setFeedbackMessage("저장된 출발 위치를 추천 기준으로 선택했어요.");
+    }
+
+    function handleSavedDepartureEmptyPreviewToggle() {
+        setIsSavedDepartureEmptyPreview((currentValue) => {
+            const nextValue = !currentValue;
+
+            if (nextValue) {
+                setSelectedSavedDepartureId("");
+            } else {
+                setSelectedSavedDepartureId(initialSavedDepartures[0]?.id ?? "");
+            }
+
+            return nextValue;
+        });
+        setFeedbackMessage(null);
+    }
+
+    function handleRecommendationViewStatePreview(nextState: RecommendationViewState) {
+        setRecommendationViewState(nextState);
+        setFeedbackMessage(null);
+
+        if (nextState !== "results") {
+            return;
+        }
+
+        setRecommendedFriendIds((currentFriendIds) => (
+            currentFriendIds.includes(activeFriendId)
+                ? currentFriendIds
+                : [...currentFriendIds, activeFriendId]
+        ));
     }
 
     function handleRecommend() {
@@ -215,6 +287,7 @@ export function useChatScreenState(requestedFriendId: string | null = null) {
                 ? currentFriendIds
                 : [...currentFriendIds, activeFriendId]
         ));
+        setRecommendationViewState("results");
         setFeedbackMessage(`${selectedFriend?.nickname ?? "친구"} 님 기준 ${recommendationSummary.modeLabel} 추천 결과를 준비했어요.`);
     }
 
@@ -234,12 +307,16 @@ export function useChatScreenState(requestedFriendId: string | null = null) {
         selectedCategory,
         departureInputMethod,
         departureSearchQuery,
-        savedDepartures: initialSavedDepartures,
+        departureSearchState,
+        departureSearchResults,
+        savedDepartures: availableSavedDepartures,
+        isSavedDepartureEmptyPreview,
         selectedSavedDepartureId,
         selectedDepartureLabel,
         recommendationSummary,
         canRecommend,
-        hasRecommendations,
+        recommendationViewState,
+        hasRecommendations: hasRecommendationResults,
         recommendationCards,
         handleSelectFriend,
         handleDraftMessageChange,
@@ -251,6 +328,8 @@ export function useChatScreenState(requestedFriendId: string | null = null) {
         handleDepartureSearchQueryChange,
         handlePinnedDepartureSelect,
         handleSavedDepartureSelect,
+        handleSavedDepartureEmptyPreviewToggle,
+        handleRecommendationViewStatePreview,
         handleRecommend,
     };
 }

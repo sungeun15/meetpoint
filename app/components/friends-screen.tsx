@@ -23,6 +23,11 @@ export function FriendsScreen() {
         return friends.filter((friend) => friend.nickname.toLowerCase().includes(normalizedQuery));
     }, [friendSearch, friends]);
 
+    const selectedFriend = useMemo(
+        () => friends.find((friend) => friend.id === selectedFriendId) ?? friends[0] ?? null,
+        [friends, selectedFriendId],
+    );
+
     function handleAddFriend(event: React.FormEvent<HTMLFormElement>) {
         event.preventDefault();
 
@@ -78,6 +83,9 @@ export function FriendsScreen() {
                     }}
                     onAddFriend={handleAddFriend}
                     formMessage={formMessage}
+                    totalFriendCount={friends.length}
+                    filteredFriendCount={filteredFriends.length}
+                    selectedFriend={selectedFriend}
                 />
             </div>
         </section>

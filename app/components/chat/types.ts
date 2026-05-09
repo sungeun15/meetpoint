@@ -12,6 +12,12 @@ export type RecommendationCategory = "cafe" | "meal" | "fun";
 
 export type DepartureInputMethod = "search" | "pin" | "saved";
 
+export type DepartureSearchResult = {
+    id: string;
+    label: string;
+    description: string;
+};
+
 export type SavedDeparture = {
     id: string;
     label: string;
@@ -36,3 +42,5 @@ export type RecommendationSummary = {
     midpointLabel: string;
     scoringLabel: string;
 };
+
+export type RecommendationViewState = "idle" | "loading" | "results" | "empty" | "error";
