@@ -25,11 +25,15 @@ export function ChatScreen({ requestedFriendId = null }: ChatScreenProps) {
         selectedCategory,
         departureInputMethod,
         departureSearchQuery,
+        departureSearchState,
+        departureSearchResults,
         savedDepartures,
+        isSavedDepartureEmptyPreview,
         selectedSavedDepartureId,
         selectedDepartureLabel,
         recommendationSummary,
         canRecommend,
+        recommendationViewState,
         hasRecommendations,
         recommendationCards,
         handleSelectFriend,
@@ -42,6 +46,8 @@ export function ChatScreen({ requestedFriendId = null }: ChatScreenProps) {
         handleDepartureSearchQueryChange,
         handlePinnedDepartureSelect,
         handleSavedDepartureSelect,
+        handleSavedDepartureEmptyPreviewToggle,
+        handleRecommendationViewStatePreview,
         handleRecommend,
     } = useChatScreenState(requestedFriendId);
 
@@ -71,11 +77,15 @@ export function ChatScreen({ requestedFriendId = null }: ChatScreenProps) {
                     selectedCategory={selectedCategory}
                     departureInputMethod={departureInputMethod}
                     departureSearchQuery={departureSearchQuery}
+                    departureSearchState={departureSearchState}
+                    departureSearchResults={departureSearchResults}
                     savedDepartures={savedDepartures}
+                    isSavedDepartureEmptyPreview={isSavedDepartureEmptyPreview}
                     selectedSavedDepartureId={selectedSavedDepartureId}
                     selectedDepartureLabel={selectedDepartureLabel}
                     recommendationSummary={recommendationSummary}
                     canRecommend={canRecommend}
+                    recommendationViewState={recommendationViewState}
                     onShareLocation={handleShareLocation}
                     onMeetingModeChange={handleMeetingModeChange}
                     onCategoryChange={handleCategoryChange}
@@ -83,6 +93,8 @@ export function ChatScreen({ requestedFriendId = null }: ChatScreenProps) {
                     onDepartureSearchQueryChange={handleDepartureSearchQueryChange}
                     onPinnedDepartureSelect={handlePinnedDepartureSelect}
                     onSavedDepartureSelect={handleSavedDepartureSelect}
+                    onSavedDepartureEmptyPreviewToggle={handleSavedDepartureEmptyPreviewToggle}
+                    onRecommendationViewStatePreview={handleRecommendationViewStatePreview}
                     onRecommend={handleRecommend}
                     hasRecommendations={hasRecommendations}
                     recommendationCards={recommendationCards}
