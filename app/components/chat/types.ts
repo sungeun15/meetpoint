@@ -10,13 +10,9 @@ export type MeetingMode = "now" | "later";
 
 export type RecommendationCategory = "cafe" | "meal" | "fun";
 
-export type DepartureInputMethod = "search" | "pin" | "saved";
+export type DepartureParty = "me" | "friend";
 
-export type DepartureSearchResult = {
-    id: string;
-    label: string;
-    description: string;
-};
+export type DepartureInputMethod = "search" | "pin" | "saved";
 
 export type SavedDeparture = {
     id: string;
@@ -42,5 +38,3 @@ export type RecommendationSummary = {
     midpointLabel: string;
     scoringLabel: string;
 };
-
-export type RecommendationViewState = "idle" | "loading" | "results" | "empty" | "error";

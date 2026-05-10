@@ -23,7 +23,7 @@ export function FriendsSidebar({
     getFriendHref,
 }: FriendsSidebarProps) {
     return (
-        <aside className="rounded-[22px] bg-white px-4 py-4 shadow-[0px_18px_44px_rgba(52,41,104,0.14)] sm:rounded-[24px] sm:px-5 sm:py-5 lg:flex lg:h-full lg:flex-col lg:rounded-[26px] lg:px-6 lg:py-6">
+        <aside className="rounded-[22px] bg-white px-4 py-4 shadow-[0px_18px_44px_rgba(52,41,104,0.14)] sm:rounded-[24px] sm:px-5 sm:py-5 lg:flex lg:h-full lg:min-h-0 lg:flex-col lg:rounded-[26px] lg:px-6 lg:py-6">
             <div className="space-y-1">
                 <h1 className={`${friendsHeadingFont.className} text-[24px] font-bold leading-none text-[#111827] sm:text-[28px] lg:text-[32px]`}>
                     친구 목록
@@ -40,7 +40,7 @@ export function FriendsSidebar({
                 className="mt-4 sm:mt-5"
             />
 
-            <div className="mt-4 space-y-2.5 sm:mt-5 sm:space-y-3 lg:flex-1">
+            <div className="mt-4 space-y-2.5 sm:mt-5 sm:space-y-3 lg:min-h-0 lg:flex-1 lg:overflow-y-auto lg:pr-1">
                 {filteredFriends.length > 0 ? (
                     filteredFriends.map((friend) => {
                         const isSelected = friend.id === selectedFriendId;

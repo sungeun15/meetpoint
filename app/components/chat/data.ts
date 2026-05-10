@@ -163,14 +163,16 @@ export function buildRecommendationSummary(
     friend: FriendItem | null,
     mode: MeetingMode,
     category: RecommendationCategory,
-    departureLabel: string | null,
+    departureLabels: { me: string | null; friend: string | null } | null,
 ): RecommendationSummary {
     const nickname = friend?.nickname ?? "친구";
 
     return {
         modeLabel: mode === "now" ? "지금 만나기" : "나중에 만나기",
         categoryLabel: categoryLabelMap[category],
-        departureLabel: mode === "now" ? "현재 공유 위치 기준" : (departureLabel ?? "출발 위치 선택 필요"),
+        departureLabel: mode === "now"
+            ? "현재 공유 위치 기준"
+            : `나: ${departureLabels?.me ?? "선택 필요"} · ${nickname}: ${departureLabels?.friend ?? "선택 필요"}`,
         midpointLabel: `${nickname} 님과 내 이동 부담을 함께 반영한 중심 지점 기준`,
         scoringLabel: "평균 이동거리, 거리 편차, 카테고리 적합도, 지역 활성도를 함께 고려",
     };
