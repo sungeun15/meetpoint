@@ -81,8 +81,9 @@ production 은 실제 최종 배포 환경이다.
 특징:
 
 1.  공개 가능한 키지만 아무 값이나 넣으면 안 된다.
-2.  예전 자료에서는 anon key라는 이름으로 보일 수 있다.
-3.  service role key 와 혼동하면 안 된다.
+2.  Supabase 공식 문서와 대시보드 기준으로 publishable key 명칭을 사용한다.
+3.  MeetPoint 문서와 환경 변수명은 NEXT\_PUBLIC\_SUPABASE\_PUBLISHABLE\_KEY 기준으로 통일한다.
+4.  service role key 와 혼동하면 안 된다.
 
 누락 시 증상:
 
@@ -140,7 +141,7 @@ production 은 실제 최종 배포 환경이다.
 누락 시 증상:
 
 1.  지도 SDK 로드 실패
-2.  메인 화면에서 지도 미표시
+2.  chat 화면에서 지도 미표시
 
 ### 4.6 KAKAO\_LOCAL\_REST\_API\_KEY
 
@@ -227,8 +228,8 @@ KAKAO_LOCAL_REST_API_KEY=abcdef1234567890abcdef1234567890
 
 참고:
 
-1.  최근 Supabase Connect 화면과 공식 문서는 NEXT\_PUBLIC\_SUPABASE\_PUBLISHABLE\_KEY 기준으로 안내한다.
-2.  예전 자료에서 보이는 anon key는 공개용 키의 이전 명칭으로 이해하면 된다.
+1.  Supabase 공식 화면과 예시 기준으로, MeetPoint 프로젝트 변수명은 NEXT\_PUBLIC\_SUPABASE\_PUBLISHABLE\_KEY로 고정한다.
+2.  문서와 코드, 배포 설정은 같은 이름을 써야 혼동을 줄일 수 있다.
 
 주의:
 

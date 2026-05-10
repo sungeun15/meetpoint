@@ -15,12 +15,12 @@ export function FeaturesContent() {
                 <h1
                     className={`${featuresPoppins.className} mt-5 text-[clamp(2.2rem,9vw,4rem)] leading-[1.08] tracking-[-0.03em] text-[#24145f] sm:mt-6`}
                 >
-                    Core Features for Smarter Meetups
+                    Features Built for Fair Meetups, Now or Later
                 </h1>
                 <p
                     className={`${featuresInter.className} mt-5 max-w-[44rem] text-[16px] leading-[1.8] text-[#4a5568] sm:mt-6 sm:text-[19px] lg:text-[22px]`}
                 >
-                    Share locations manually, compare positions on the map, and explore top midpoint-based recommendations in one flow.
+                    MeetPoint connects chat, current location sharing, departure selection, category-based recommendation, and map feedback in one planning flow.
                 </p>
             </div>
 
@@ -35,7 +35,7 @@ export function FeaturesContent() {
                     href="/signup"
                     className={`${featuresInter.className} inline-flex min-h-[56px] w-full cursor-pointer items-center justify-center rounded-[10px] px-6 py-4 text-[15px] font-semibold text-[#fafafa] shadow-[0px_10px_28px_rgba(36,20,95,0.18)] transition-transform hover:-translate-y-0.5 sm:w-auto sm:min-w-[240px] sm:px-8 sm:text-[16px]`}
                 >
-                    Get Started Now
+                    Start Planning with MeetPoint
                 </GradientActionLink>
             </div>
         </section>
