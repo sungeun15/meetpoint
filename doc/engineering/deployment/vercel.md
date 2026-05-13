@@ -197,16 +197,16 @@ JWT\_SECRET 은 충분히 길고 예측하기 어려운 문자열을 사용한�
 크론 스케줄은 아래 기준이다.
 
 ```
-*/30 * * * *
+0 3 * * *
 ```
 
-즉, 30분마다 Supabase 헬스체크 Route Handler를 호출해 연결 상태를 확인한다.
+즉, 하루에 한 번 Supabase 헬스체크 Route Handler를 호출해 연결 상태를 확인한다.
 
 권장 사항:
 
 1.  Vercel 환경 변수에 `CRON_SECRET` 을 넣는다.
 2.  배포 후 `/api/health/supabase` 가 200을 반환하는지 확인한다.
-3.  Cron Logs 에 30분 주기 호출 흔적이 남는지 확인한다.
+3.  Cron Logs 에 일 1회 호출 흔적이 남는지 확인한다.
 
 ## 7\. 배포 절차
 
