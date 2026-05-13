@@ -4,22 +4,18 @@ import type { FormEvent } from "react";
 import { useMemo, useState } from "react";
 
 import { initialFriends } from "../friends/data";
+import {
+    buildFriendLocationStatus,
+    buildMyLocationStatus,
+    buildOutgoingChatMessage,
+    formatCurrentTime,
+    resolveDemoSharedLocationFallback,
+    type SharedLocationState,
+} from "./chat-screen-helpers";
+import { formatLocationPreview } from "./data";
 import { initialChatMessages } from "./data";
-import type { ChatMessage } from "./types";
-import { useRecommendationFlowState } from "./use-recommendation-flow-state";
-
-const initialSharedLocationTimestamps: Record<string, string> = {
-    "young-geol": "오전 10:10",
-    "young-jun": "오후 01:05",
-};
-
-function formatCurrentTime() {
-    return new Intl.DateTimeFormat("ko-KR", {
-        hour: "2-digit",
-        minute: "2-digit",
-        hour12: true,
-    }).format(new Date());
-}
+import type { ChatMessage, ResolvedLocation } from "./types";
+import { useRecommendationFlowState } from "./recommendation/use-recommendation-flow-state";
 
 export function useChatScreenState(requestedFriendId: string | null = null) {
     const [friendSearch, setFriendSearch] = useState("");
@@ -27,7 +23,7 @@ export function useChatScreenState(requestedFriendId: string | null = null) {
     const [messages, setMessages] = useState<ChatMessage[]>(initialChatMessages);
     const [draftMessage, setDraftMessage] = useState("");
     const [feedbackMessage, setFeedbackMessage] = useState<string | null>(null);
-    const [sharedLocationTimestamps, setSharedLocationTimestamps] = useState<Record<string, string>>(initialSharedLocationTimestamps);
+    const [sharedLocations, setSharedLocations] = useState<Record<string, SharedLocationState>>({});
 
     const activeFriendId = initialFriends.some((friend) => friend.id === requestedFriendId)
         ? requestedFriendId ?? selectedFriendId
@@ -53,7 +49,8 @@ export function useChatScreenState(requestedFriendId: string | null = null) {
         [messages, activeFriendId],
     );
 
-    const lastSharedAt = sharedLocationTimestamps[activeFriendId] ?? null;
+    const mySharedLocation = sharedLocations[activeFriendId] ?? null;
+    const lastSharedAt = mySharedLocation?.sharedAt ?? null;
     const {
         meetingMode,
         selectedCategory,
@@ -69,6 +66,7 @@ export function useChatScreenState(requestedFriendId: string | null = null) {
         hasFriendLocationStatusData,
         hasRecommendations,
         recommendationCards,
+        mapMarkers,
         handleMeetingModeChange,
         handleCategoryChange,
         handleDepartureInputMethodChange,
@@ -81,17 +79,13 @@ export function useChatScreenState(requestedFriendId: string | null = null) {
         resetSavedDeparturePreview,
     } = useRecommendationFlowState({
         activeFriendId,
-        lastSharedAt,
+        mySharedLocation,
         selectedFriend,
         setFeedbackMessage,
     });
 
-    const myLocationStatus = lastSharedAt
-        ? `내 위치를 ${lastSharedAt}에 공유했어요. 추천 정확도를 높일 준비가 됐어요.`
-        : "아직 내 위치를 공유하지 않았어요. 위치 공유 후 추천을 시작할 수 있어요.";
-    const friendLocationStatus = selectedFriend
-        ? `${selectedFriend.nickname} 님은 ${selectedFriend.locationHint}`
-        : "친구 위치 정보가 없어요.";
+    const myLocationStatus = buildMyLocationStatus(mySharedLocation);
+    const friendLocationStatus = buildFriendLocationStatus(selectedFriend);
 
     function handleSelectFriend(friendId: string) {
         setSelectedFriendId(friendId);
@@ -119,26 +113,62 @@ export function useChatScreenState(requestedFriendId: string | null = null) {
 
         setMessages((currentMessages) => [
             ...currentMessages,
-            {
-                id: `${activeFriendId}-${Date.now()}`,
-                friendId: activeFriendId,
-                sender: "me",
-                text: normalizedMessage,
-                time: formatCurrentTime(),
-            },
+            buildOutgoingChatMessage(activeFriendId, normalizedMessage),
         ]);
         setDraftMessage("");
         setFeedbackMessage("메세지를 전송했어요.");
     }
 
-    function handleShareLocation() {
+    function commitSharedLocation(nextLocation: ResolvedLocation, feedbackLabel: string) {
         const nextTimestamp = formatCurrentTime();
 
-        setSharedLocationTimestamps((currentTimestamps) => ({
-            ...currentTimestamps,
-            [activeFriendId]: nextTimestamp,
+        setSharedLocations((currentLocations) => ({
+            ...currentLocations,
+            [activeFriendId]: {
+                ...nextLocation,
+                sharedAt: nextTimestamp,
+            },
         }));
-        setFeedbackMessage(`현재 위치를 ${nextTimestamp}에 공유했어요.`);
+        setFeedbackMessage(`${feedbackLabel} ${nextTimestamp}에 반영했어요.`);
+    }
+
+    function handleShareLocation() {
+        const fallbackLocation = resolveDemoSharedLocationFallback(activeFriendId);
+
+        if (typeof navigator === "undefined" || !navigator.geolocation) {
+            commitSharedLocation(fallbackLocation, "브라우저 위치를 읽지 못해 데모 좌표를");
+            return;
+        }
+
+        setFeedbackMessage("브라우저 현재 위치를 확인하고 있어요.");
+
+        navigator.geolocation.getCurrentPosition(
+            (position) => {
+                commitSharedLocation(
+                    {
+                        label: "내 현재 위치",
+                        address: `브라우저 현재 위치 · ${formatLocationPreview({
+                            latitude: position.coords.latitude,
+                            longitude: position.coords.longitude,
+                        })}`,
+                        latitude: position.coords.latitude,
+                        longitude: position.coords.longitude,
+                    },
+                    "현재 위치를",
+                );
+            },
+            (error) => {
+                const errorPrefix = error.code === error.PERMISSION_DENIED
+                    ? "위치 권한이 없어 데모 좌표를"
+                    : "정확한 위치를 읽지 못해 데모 좌표를";
+                commitSharedLocation(fallbackLocation, errorPrefix);
+            },
+            {
+                enableHighAccuracy: true,
+                timeout: 8000,
+                maximumAge: 0,
+            },
+        );
     }
 
     return {
@@ -167,6 +197,7 @@ export function useChatScreenState(requestedFriendId: string | null = null) {
         hasFriendLocationStatusData,
         hasRecommendations,
         recommendationCards,
+        mapMarkers,
         handleSelectFriend,
         handleDraftMessageChange,
         handleSendMessage,

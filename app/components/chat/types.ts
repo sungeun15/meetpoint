@@ -17,18 +17,42 @@ export type DepartureInputMethod = "search" | "pin" | "saved";
 export type SavedDeparture = {
     id: string;
     label: string;
+    address: string;
     description: string;
     locationKind: "recent" | "preset";
+};
+
+export type LocationPoint = {
+    latitude: number;
+    longitude: number;
+};
+
+export type ResolvedLocation = LocationPoint & {
+    address: string;
+    label: string;
+};
+
+export type MapMarker = LocationPoint & {
+    id: string;
+    label: string;
+    description: string;
+    placeCategory?: string;
+    markerType: "person" | "place" | "midpoint";
 };
 
 export type RecommendationCard = {
     id: string;
     name: string;
     category: string;
+    address: string;
     myDistance: string;
     friendDistance: string;
-    summary: string;
+    myDrivingEstimate: string;
+    friendDrivingEstimate: string;
     rank: number;
+    latitude: number;
+    longitude: number;
+    scoreLabel: string;
 };
 
 export type RecommendationSummary = {
@@ -37,4 +61,10 @@ export type RecommendationSummary = {
     departureLabel: string;
     midpointLabel: string;
     scoringLabel: string;
+};
+
+export type RecommendationSnapshot = {
+    summary: RecommendationSummary;
+    cards: RecommendationCard[];
+    markers: MapMarker[];
 };
