@@ -5,7 +5,7 @@ import { useEffect, useRef, useState } from "react";
 import { ChatConversationPanel } from "./chat/chat-conversation-panel";
 import { ChatHeaderCard } from "./chat/chat-header-card";
 import { ChatLocationStatusPanel } from "./chat/chat-location-status-panel";
-import { ChatRecommendationPanels } from "./chat/chat-recommendation-panels";
+import { ChatRecommendationPanels } from "./chat/recommendation/chat-recommendation-panels";
 import { ChatSaveLocationLayer } from "./chat/chat-save-location-layer";
 import { useChatScreenState } from "./chat/use-chat-screen-state";
 import type { DepartureParty } from "./chat/types";
@@ -26,6 +26,7 @@ export function ChatScreen({ requestedFriendId = null }: ChatScreenProps) {
     const topPanelsRef = useRef<HTMLDivElement | null>(null);
     const sidebarPanelRef = useRef<HTMLDivElement | null>(null);
     const [pendingLocationSave, setPendingLocationSave] = useState<PendingLocationSave | null>(null);
+    const [isMobileSidebarCollapsed, setIsMobileSidebarCollapsed] = useState(true);
     const {
         friendSearch,
         setFriendSearch,
@@ -52,6 +53,7 @@ export function ChatScreen({ requestedFriendId = null }: ChatScreenProps) {
         hasFriendLocationStatusData,
         hasRecommendations,
         recommendationCards,
+        mapMarkers,
         handleSelectFriend,
         handleDraftMessageChange,
         handleSendMessage,
@@ -97,16 +99,34 @@ export function ChatScreen({ requestedFriendId = null }: ChatScreenProps) {
         }
     }
 
+    function handleToggleMobileSidebar() {
+        setIsMobileSidebarCollapsed((currentValue) => !currentValue);
+    }
+
+    function handleSelectFriendAndCollapse(friendId: string) {
+        handleSelectFriend(friendId);
+
+        if (typeof window !== "undefined" && window.innerWidth < 1024) {
+            setIsMobileSidebarCollapsed(true);
+        }
+    }
+
     useEffect(() => {
         const topPanelsElement = topPanelsRef.current;
+        const sidebarPanelElement = sidebarPanelRef.current;
 
-        if (!topPanelsElement) {
+        if (!topPanelsElement || !sidebarPanelElement) {
             return;
         }
 
         const updateHeight = () => {
+            if (window.innerWidth < 1280) {
+                sidebarPanelElement.style.removeProperty("--friends-panel-height");
+                return;
+            }
+
             const nextHeight = `${topPanelsElement.getBoundingClientRect().height}px`;
-            sidebarPanelRef.current?.style.setProperty("--friends-panel-height", nextHeight);
+            sidebarPanelElement.style.setProperty("--friends-panel-height", nextHeight);
         };
 
         updateHeight();
@@ -116,29 +136,48 @@ export function ChatScreen({ requestedFriendId = null }: ChatScreenProps) {
         });
 
         resizeObserver.observe(topPanelsElement);
+        window.addEventListener("resize", updateHeight);
 
         return () => {
             resizeObserver.disconnect();
+            window.removeEventListener("resize", updateHeight);
         };
     }, [selectedFriend, selectedMessages.length, feedbackMessage, myLocationStatus, friendLocationStatus, lastSharedAt]);
 
+    useEffect(() => {
+        const syncSidebarVisibility = () => {
+            setIsMobileSidebarCollapsed(window.innerWidth < 1024);
+        };
+
+        syncSidebarVisibility();
+        window.addEventListener("resize", syncSidebarVisibility);
+
+        return () => {
+            window.removeEventListener("resize", syncSidebarVisibility);
+        };
+    }, []);
+
     return (
-        <section className="flex min-h-[calc(100vh-72px)] flex-1 bg-[#eeebff] px-2.5 py-4 sm:px-5 sm:py-6 md:min-h-[calc(100vh-84px)] md:px-6 md:py-8 lg:px-8 lg:py-10 xl:px-10 xl:py-12">
-            <div className="mx-auto grid w-full max-w-360 gap-4 sm:gap-5 xl:gap-6">
-                <div className="grid gap-4 sm:gap-5 lg:grid-cols-[320px_minmax(0,1fr)] lg:items-start xl:grid-cols-[360px_minmax(0,1fr)] xl:gap-6">
-                    <div ref={sidebarPanelRef} className="lg:h-(--friends-panel-height) lg:min-h-0">
+        <section className="flex min-h-[calc(100vh-72px)] flex-1 bg-[#eeebff] px-2.5 py-2.5 sm:px-4 sm:py-4 md:min-h-[calc(100vh-84px)] md:px-5 md:py-5 lg:px-6 lg:py-6 xl:px-7 xl:py-8">
+            <div className="mx-auto grid w-full max-w-[1440px] gap-2 sm:gap-3 xl:gap-4">
+                <div className="grid gap-2.5 sm:gap-4 lg:grid-cols-[280px_minmax(0,1fr)] lg:items-start xl:grid-cols-[320px_minmax(0,1fr)] xl:gap-5">
+                    <div ref={sidebarPanelRef} className="xl:h-(--friends-panel-height) xl:min-h-0">
                         <FriendsSidebar
                             friendSearch={friendSearch}
                             onFriendSearchChange={setFriendSearch}
                             filteredFriends={filteredFriends}
                             selectedFriendId={activeFriendId}
-                            onSelectFriend={handleSelectFriend}
+                            selectedFriendName={selectedFriend?.nickname ?? null}
+                            onSelectFriend={handleSelectFriendAndCollapse}
                             getFriendHref={(friendId) => `/chat?friend=${friendId}`}
+                            isCollapsible
+                            isCollapsed={isMobileSidebarCollapsed}
+                            onToggleCollapsed={handleToggleMobileSidebar}
                         />
                     </div>
 
                     {selectedFriend ? (
-                        <div ref={topPanelsRef} className="grid gap-4 sm:gap-5 xl:gap-6">
+                        <div ref={topPanelsRef} className="grid gap-2.5 sm:gap-4 xl:gap-5">
                             <ChatHeaderCard selectedFriend={selectedFriend} lastSharedAt={lastSharedAt} />
 
                             <ChatConversationPanel
@@ -153,6 +192,7 @@ export function ChatScreen({ requestedFriendId = null }: ChatScreenProps) {
                             <ChatLocationStatusPanel
                                 myLocationStatus={myLocationStatus}
                                 friendLocationStatus={friendLocationStatus}
+                                lastSharedAt={lastSharedAt}
                                 canSaveMyLocation={hasMyLocationStatusData}
                                 canSaveFriendLocation={hasFriendLocationStatusData}
                                 onShareLocation={handleShareLocation}
@@ -186,6 +226,7 @@ export function ChatScreen({ requestedFriendId = null }: ChatScreenProps) {
                         onRecommend={handleRecommend}
                         hasRecommendations={hasRecommendations}
                         recommendationCards={recommendationCards}
+                        mapMarkers={mapMarkers}
                     />
                 ) : null}
 
