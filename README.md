@@ -88,9 +88,16 @@ pnpm type-check
 pnpm run test:kakao:sdk
 pnpm run test:kakao:local
 pnpm run test:supabase
+pnpm run test:supabase:schema
 pnpm run test:supabase:table
 pnpm run test:supabase:cleanup
 ```
+
+운영 헬스체크:
+
+*   `/api/health/supabase` Route Handler로 Supabase 테이블 접근 상태를 확인할 수 있습니다.
+*   `vercel.json` 에 `*/30 * * * *` 크론 설정이 포함되어 있습니다.
+*   `CRON_SECRET` 환경 변수가 설정되어 있어야 Vercel cron 요청이 통과합니다.
 
 ## 프로젝트 구조
 
