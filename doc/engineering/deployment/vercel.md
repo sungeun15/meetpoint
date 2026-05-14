@@ -76,11 +76,8 @@ CLI 배포도 가능하지만, MVP 운영 기준에서는 Git 연동 방식이 �
 4.  JWT\_SECRET
 5.  NEXT\_PUBLIC\_KAKAO\_MAP\_APP\_KEY
 6.  KAKAO\_LOCAL\_REST\_API\_KEY
-7.  CRON\_SECRET
 
 이 값이 하나라도 빠지면 인증, 위치 저장, Kakao 지도, 추천 API 중 일부가 바로 실패할 수 있다.
-
-CRON\_SECRET 은 `/api/health/supabase` 헬스체크를 실행하기 위한 필수 서버 전용 값이다.
 
 ## 5\. Vercel 프로젝트 설정
 
@@ -159,12 +156,6 @@ NEXT_PUBLIC_KAKAO_MAP_APP_KEY
 KAKAO_LOCAL_REST_API_KEY
 ```
 
-운영 헬스체크를 사용할 경우 아래 값을 반드시 추가한다.
-
-```
-CRON_SECRET
-```
-
 JWT\_SECRET 은 충분히 길고 예측하기 어려운 문자열을 사용한다.
 
 ### 6.2 Preview 환경 변수
@@ -186,27 +177,6 @@ JWT\_SECRET 은 충분히 길고 예측하기 어려운 문자열을 사용한�
 3.  KAKAO\_LOCAL\_REST\_API\_KEY 는 브라우저 코드에 직접 넣지 않는다.
 4.  환경 변수 값은 문서에 실제 값 자체를 적지 않는다.
 5.  값 변경 후에는 필요한 경우 재배포해서 반영 여부를 확인한다.
-
-### 6.4 Vercel cron 설정
-
-현재 프로젝트 루트에는 아래 설정이 반영되어 있다.
-
-1.  `vercel.json`
-2.  `/api/health/supabase`
-
-크론 스케줄은 아래 기준이다.
-
-```
-0 3 * * *
-```
-
-즉, 하루에 한 번 Supabase 헬스체크 Route Handler를 호출해 연결 상태를 확인한다.
-
-권장 사항:
-
-1.  Vercel 환경 변수에 `CRON_SECRET` 을 넣는다.
-2.  배포 후 `/api/health/supabase` 가 200을 반환하는지 확인한다.
-3.  Cron Logs 에 일 1회 호출 흔적이 남는지 확인한다.
 
 ## 7\. 배포 절차
 
