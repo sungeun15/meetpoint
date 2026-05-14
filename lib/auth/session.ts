@@ -24,6 +24,13 @@ export type CurrentSessionLookup = {
     shouldClearCookie: boolean;
 };
 
+export class AuthRequiredError extends Error {
+    constructor(message = "인증이 필요합니다.") {
+        super(message);
+        this.name = "AuthRequiredError";
+    }
+}
+
 type AuthTokenInput = {
     userId: string;
     nickname: string;
@@ -77,6 +84,28 @@ export async function getCurrentSession() {
     const { session } = await lookupCurrentSession();
 
     return session;
+}
+
+// 보호 API에서는 단순 조회가 아니라 인증을 강제해야 하므로, 세션이 없으면 예외로 중단한다.
+export async function requireCurrentSession() {
+    const { session, shouldClearCookie } = await lookupCurrentSession();
+
+    if (!session) {
+        if (shouldClearCookie) {
+            await clearAuthCookie();
+        }
+
+        throw new AuthRequiredError();
+    }
+
+    return session;
+}
+
+// repository 와 service 계층이 가장 자주 쓰는 현재 사용자 식별자는 별도 헬퍼로 꺼낼 수 있게 한다.
+export async function requireCurrentUserId() {
+    const session = await requireCurrentSession();
+
+    return session.userId;
 }
 
 // 보호 API에서는 세션 유무와 함께 쿠키 정리 필요 여부까지 같이 판단한다.
