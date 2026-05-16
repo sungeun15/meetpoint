@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 import type { KakaoMapInstance, KakaoMarkerInstance } from "@/lib/kakao/map-loader";
 import { loadKakaoMapSdk } from "@/lib/kakao/map-loader";

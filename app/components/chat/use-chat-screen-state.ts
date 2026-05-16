@@ -87,7 +87,9 @@ function formatLocationUpdatedLabel(locationUpdatedAt: string | null) {
 
 function mapFriendSummaryToItem(friend: FriendSummary): FriendItem {
     const updatedLabel = formatLocationUpdatedLabel(friend.locationUpdatedAt);
-    const hasLocation = friend.lat !== null && friend.lng !== null;
+    const latitude = friend.lat;
+    const longitude = friend.lng;
+    const hasLocation = latitude !== null && longitude !== null;
 
     return {
         id: friend.id,
@@ -96,13 +98,13 @@ function mapFriendSummaryToItem(friend: FriendSummary): FriendItem {
             ? (updatedLabel ? `${updatedLabel} 위치를 공유했어요` : "최근 위치를 공유했어요")
             : "아직 위치를 공유하지 않았어요",
         locationHint: hasLocation
-            ? `현재 저장된 좌표는 ${friend.lat.toFixed(5)}, ${friend.lng.toFixed(5)} 입니다.`
+            ? `현재 저장된 좌표는 ${latitude.toFixed(5)}, ${longitude.toFixed(5)} 입니다.`
             : "위치 공유를 시작하면 chat 화면에서 좌표와 상태를 확인할 수 있어요.",
         locationSnapshot: hasLocation
             ? {
-                address: `좌표 ${friend.lat.toFixed(5)}, ${friend.lng.toFixed(5)}`,
-                latitude: friend.lat,
-                longitude: friend.lng,
+                address: `좌표 ${latitude.toFixed(5)}, ${longitude.toFixed(5)}`,
+                latitude,
+                longitude,
                 sharedAt: updatedLabel,
             }
             : undefined,
