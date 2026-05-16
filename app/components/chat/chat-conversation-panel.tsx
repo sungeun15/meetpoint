@@ -1,4 +1,4 @@
-import { useState, type FormEvent } from "react";
+import { useEffect, useRef, useState, type FormEvent } from "react";
 
 import { friendsBodyFont, friendsDisplayFont, friendsHeadingFont } from "../friends/fonts";
 import type { FriendItem } from "../friends/types";
@@ -59,6 +59,24 @@ export function ChatConversationPanel({
 }: ChatConversationPanelProps) {
     const [isMobileConversationCollapsed, setIsMobileConversationCollapsed] = useState(true);
     const latestMessage = messages[messages.length - 1] ?? null;
+    const conversationViewportRef = useRef<HTMLDivElement | null>(null);
+    const latestMessageKey = latestMessage?.id ?? "";
+
+    useEffect(() => {
+        const viewportElement = conversationViewportRef.current;
+
+        if (!viewportElement || viewportElement.offsetParent === null) {
+            return;
+        }
+
+        const animationFrameId = window.requestAnimationFrame(() => {
+            viewportElement.scrollTop = viewportElement.scrollHeight;
+        });
+
+        return () => {
+            window.cancelAnimationFrame(animationFrameId);
+        };
+    }, [isMobileConversationCollapsed, latestMessageKey, selectedFriend.id]);
 
     return (
         <ChatSectionCard className="overflow-hidden">
@@ -97,27 +115,32 @@ export function ChatConversationPanel({
                     </div>
                 ) : null}
 
-                <div className={`${isMobileConversationCollapsed ? "hidden sm:flex" : "flex"} min-h-[240px] flex-col gap-3 sm:min-h-[300px] sm:gap-4 lg:min-h-[340px] xl:min-h-[380px]`}>
-                    {messages.length > 0 ? (
-                        messages.map((message) => (
-                            <ChatMessageItem
-                                key={message.id}
-                                message={message}
-                                friendName={selectedFriend.nickname}
-                            />
-                        ))
-                    ) : (
-                        <div className="flex flex-1 items-center justify-center rounded-[18px] border border-dashed border-[#d1d5db] bg-[#fcfbff] px-4 py-8 text-center sm:px-5 sm:py-12">
-                            <div className="space-y-2">
-                                <p className={`${friendsHeadingFont.className} break-keep text-[16px] text-[#111827] sm:text-[22px] lg:text-[24px]`}>
-                                    아직 주고받은 메시지가 없습니다.
-                                </p>
-                                <p className={`${friendsDisplayFont.className} break-keep text-[13px] text-[#6b7280] sm:text-[16px] lg:text-[17px]`}>
-                                    첫 메시지를 보내 대화를 시작해 보세요.
-                                </p>
+                <div
+                    ref={conversationViewportRef}
+                    className={`${isMobileConversationCollapsed ? "hidden sm:block" : "block"} h-[240px] overflow-y-auto pr-1 sm:h-[300px] sm:pr-2 lg:h-[340px] xl:h-[380px]`}
+                >
+                    <div className="flex min-h-full flex-col gap-3 sm:gap-4">
+                        {messages.length > 0 ? (
+                            messages.map((message) => (
+                                <ChatMessageItem
+                                    key={message.id}
+                                    message={message}
+                                    friendName={selectedFriend.nickname}
+                                />
+                            ))
+                        ) : (
+                            <div className="flex flex-1 items-center justify-center rounded-[18px] border border-dashed border-[#d1d5db] bg-[#fcfbff] px-4 py-8 text-center sm:px-5 sm:py-12">
+                                <div className="space-y-2">
+                                    <p className={`${friendsHeadingFont.className} break-keep text-[16px] text-[#111827] sm:text-[22px] lg:text-[24px]`}>
+                                        아직 주고받은 메시지가 없습니다.
+                                    </p>
+                                    <p className={`${friendsDisplayFont.className} break-keep text-[13px] text-[#6b7280] sm:text-[16px] lg:text-[17px]`}>
+                                        첫 메시지를 보내 대화를 시작해 보세요.
+                                    </p>
+                                </div>
                             </div>
-                        </div>
-                    )}
+                        )}
+                    </div>
                 </div>
 
                 <form className="flex flex-col gap-2 border-t border-[#ebe8fb] pt-3 md:flex-row md:items-center" onSubmit={onSendMessage}>

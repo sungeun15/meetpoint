@@ -43,7 +43,7 @@ export function ChatRecommendationResultsPanel({
     }, [selectedRecommendationId]);
 
     return (
-        <ChatSectionCard className="px-3 py-3.5 sm:px-4 sm:py-5 lg:px-5 xl:px-5">
+        <ChatSectionCard className="flex h-full flex-col px-3 py-3.5 sm:px-4 sm:py-5 lg:px-5 xl:px-5">
             <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                 <div>
                     <p className={`${friendsDisplayFont.className} text-[13px] text-[#111827] sm:text-[16px]`}>
@@ -51,10 +51,10 @@ export function ChatRecommendationResultsPanel({
                     </p>
                     <div className="mt-2"><RecommendationResultsIntro hasRecommendations={hasRecommendations} /></div>
                 </div>
-                <RecommendationModeBadge modeLabel={recommendationSummary.modeLabel} />
+                <RecommendationModeBadge modeLabel={recommendationSummary.modeLabel} emphasized />
             </div>
 
-            <div className="mt-2 rounded-[20px] border border-[#ddd8ff] bg-[linear-gradient(180deg,rgba(255,255,255,0.96)_0%,rgba(241,237,255,0.92)_100%)] px-3 py-2.5 shadow-[inset_0_1px_0_rgba(255,255,255,0.6)] sm:mt-3 sm:px-4 sm:py-4">
+            <div className="mt-2 flex-1 rounded-[20px] border border-[#ddd8ff] bg-[linear-gradient(180deg,rgba(255,255,255,0.96)_0%,rgba(241,237,255,0.92)_100%)] px-3 py-2.5 shadow-[inset_0_1px_0_rgba(255,255,255,0.6)] sm:mt-3 sm:px-4 sm:py-4">
                 <RecommendationResultsBody
                     meetingMode={meetingMode}
                     hasRecommendations={hasRecommendations}

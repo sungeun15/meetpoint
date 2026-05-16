@@ -44,7 +44,7 @@ export function ChatRecommendationMapPanel({
     ));
 
     return (
-        <ChatSectionCard className="px-3 py-3.5 sm:px-4 sm:py-5 lg:px-5 xl:px-5">
+        <ChatSectionCard className="flex h-full flex-col px-3 py-3.5 sm:px-4 sm:py-5 lg:px-5 xl:px-5">
             <div className="space-y-3 sm:space-y-3.5">
                 <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                     <div className="min-w-0 flex-1">
@@ -60,7 +60,7 @@ export function ChatRecommendationMapPanel({
                             </p>
                         </div>
                     </div>
-                    <RecommendationModeBadge modeLabel={recommendationSummary.modeLabel} />
+                    <RecommendationModeBadge modeLabel={recommendationSummary.modeLabel} emphasized />
                 </div>
 
                 {/* 추천 결과 유무에 따라 장소 칩 목록 또는 참여자 칩 요약만 보여 줍니다. */}
@@ -77,7 +77,7 @@ export function ChatRecommendationMapPanel({
             </div>
 
             {/* 지도 본문은 항상 렌더하되 내부에서 loading/error/ready 상태를 스스로 처리합니다. */}
-            <div className="mt-2 rounded-[20px] border border-[#ddd8ff] bg-[linear-gradient(180deg,rgba(255,255,255,0.96)_0%,rgba(241,237,255,0.92)_100%)] px-1.5 py-1.5 shadow-[inset_0_1px_0_rgba(255,255,255,0.6)] sm:mt-2.5 sm:px-3 sm:py-3">
+            <div className="mt-2 flex-1 rounded-[20px] border border-[#ddd8ff] bg-[linear-gradient(180deg,rgba(255,255,255,0.96)_0%,rgba(241,237,255,0.92)_100%)] px-1.5 py-1.5 shadow-[inset_0_1px_0_rgba(255,255,255,0.6)] sm:mt-2.5 sm:px-3 sm:py-3">
                 <KakaoMapPreview
                     markers={mapMarkers}
                     selectedMarkerId={focusedMarkerId}

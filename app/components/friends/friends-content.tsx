@@ -9,7 +9,12 @@ import type { FriendItem } from "./types";
 type FriendsContentProps = {
     pendingNickname: string;
     onPendingNicknameChange: (nextValue: string) => void;
-    onAddFriend: (event: FormEvent<HTMLFormElement>) => void;
+    searchedFriend: FriendItem | null;
+    isSearchedFriendAlreadyAdded: boolean;
+    isSearchingFriend: boolean;
+    isSubmittingFriend: boolean;
+    onSearchFriend: (event: FormEvent<HTMLFormElement>) => void;
+    onAddFriend: () => void;
     formMessage: string | null;
     totalFriendCount: number;
     filteredFriendCount: number;
@@ -19,6 +24,11 @@ type FriendsContentProps = {
 export function FriendsContent({
     pendingNickname,
     onPendingNicknameChange,
+    searchedFriend,
+    isSearchedFriendAlreadyAdded,
+    isSearchingFriend,
+    isSubmittingFriend,
+    onSearchFriend,
     onAddFriend,
     formMessage,
     totalFriendCount,
@@ -39,7 +49,7 @@ export function FriendsContent({
                     </p>
                 </div>
 
-                <form className="mt-6 flex flex-col gap-3 md:flex-row md:items-center md:gap-3 lg:mt-8 lg:gap-[10px] xl:mt-10" onSubmit={onAddFriend}>
+                <form className="mt-6 flex flex-col gap-3 md:flex-row md:items-center md:gap-3 lg:mt-8 lg:gap-[10px] xl:mt-10" onSubmit={onSearchFriend}>
                     <FriendSearchField
                         value={pendingNickname}
                         onChange={onPendingNicknameChange}
@@ -50,10 +60,11 @@ export function FriendsContent({
 
                     <button
                         type="submit"
-                        className={`${friendsHeadingFont.className} inline-flex h-12 w-full cursor-pointer items-center justify-center rounded-[12px] border-[3px] border-white px-6 text-[18px] font-bold text-white shadow-[0px_10px_24px_rgba(108,92,231,0.18)] transition-opacity hover:opacity-95 sm:h-[50px] sm:text-[19px] md:w-[132px] md:shrink-0 lg:h-[52px] lg:w-[128px] lg:text-[20px]`}
+                        disabled={isSearchingFriend}
+                        className={`${friendsHeadingFont.className} inline-flex h-11 w-full cursor-pointer items-center justify-center whitespace-nowrap rounded-[12px] border-[3px] border-white px-4 text-[15px] font-bold text-white shadow-[0px_10px_24px_rgba(108,92,231,0.18)] transition-opacity hover:opacity-95 sm:h-[50px] sm:px-5 sm:text-[17px] md:w-[132px] md:shrink-0 lg:h-[52px] lg:w-[128px] lg:text-[20px]`}
                         style={{ backgroundImage: friendsGradientBackground }}
                     >
-                        검색
+                        {isSearchingFriend ? "검색 중" : "검색"}
                     </button>
                 </form>
 
@@ -61,6 +72,36 @@ export function FriendsContent({
                     <p className={`${friendsBodyFont.className} mt-3 text-[13px] leading-[1.6] text-[#6c5ce7] sm:text-sm lg:text-[15px]`}>
                         {formMessage}
                     </p>
+                ) : null}
+
+                {searchedFriend ? (
+                    <article className="mt-4 rounded-[18px] border border-[#ddd8ff] bg-[#f8f5ff] px-4 py-4 shadow-[0px_12px_24px_rgba(52,41,104,0.08)] sm:px-5">
+                        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                            <div className="min-w-0">
+                                <p className={`${friendsBodyFont.className} text-[11px] uppercase tracking-[0.18em] text-[#8a7be5]`}>
+                                    검색 결과
+                                </p>
+                                <p className={`${friendsHeadingFont.className} mt-2 text-[20px] text-[#111827] sm:text-[22px]`}>
+                                    {searchedFriend.nickname}
+                                </p>
+                                <p className={`${friendsDisplayFont.className} mt-2 text-[14px] leading-[1.6] text-[#4f5875]`}>
+                                    {searchedFriend.status}
+                                </p>
+                                <p className={`${friendsBodyFont.className} mt-2 text-[13px] leading-[1.65] text-[#6b7280]`}>
+                                    {searchedFriend.locationHint}
+                                </p>
+                            </div>
+
+                            <button
+                                type="button"
+                                onClick={onAddFriend}
+                                disabled={isSearchedFriendAlreadyAdded || isSubmittingFriend}
+                                className={`${friendsHeadingFont.className} inline-flex h-11 w-full items-center justify-center rounded-[12px] border border-[#d7cef9] bg-white px-5 text-[16px] font-bold text-[#5f47d2] shadow-[0px_10px_20px_rgba(108,92,231,0.12)] transition-opacity hover:opacity-95 disabled:cursor-not-allowed disabled:opacity-55 sm:h-12 sm:w-auto sm:min-w-[132px]`}
+                            >
+                                {isSearchedFriendAlreadyAdded ? "이미 등록됨" : isSubmittingFriend ? "추가 중..." : "친구 추가"}
+                            </button>
+                        </div>
+                    </article>
                 ) : null}
             </section>
 
@@ -78,15 +119,15 @@ export function FriendsContent({
                         <span className={`${friendsBodyFont.className} inline-flex rounded-full bg-[#efeaff] px-3 py-1 text-[11px] uppercase tracking-[0.18em] text-[#6c5ce7]`}>
                             Friends Hub
                         </span>
-                        <h2 className={`${friendsHeadingFont.className} mt-3 text-[24px] font-bold leading-none text-[#111827] sm:text-[28px] lg:text-[32px]`}>
+                        <h2 className={`${friendsHeadingFont.className} mt-3 text-[20px] font-bold leading-none text-[#111827] sm:text-[24px] lg:text-[28px]`}>
                             상세 화면으로 들어가기 전 준비 상태를 확인해요
                         </h2>
                         <p className={`${friendsDisplayFont.className} mt-3 max-w-[30ch] text-[14px] leading-[1.6] text-[#5f6782] sm:text-[16px] lg:text-[18px]`}>
                             친구를 고르고 chat 화면으로 넘어가기 전에 친구 목록, 추가 결과, 다음 액션을 한눈에 확인할 수 있는 허브 영역입니다.
                         </p>
 
-                        <div className="mt-5 grid gap-3 sm:grid-cols-3">
-                            <article className="rounded-[16px] bg-[#faf7ff] px-4 py-4">
+                        <div className="mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                            <article className="rounded-[16px] bg-[#faf7ff] px-4 py-4 sm:min-h-[112px]">
                                 <p className={`${friendsBodyFont.className} text-[11px] uppercase tracking-[0.18em] text-[#8a7be5]`}>
                                     등록된 친구
                                 </p>
@@ -94,7 +135,7 @@ export function FriendsContent({
                                     {totalFriendCount}
                                 </p>
                             </article>
-                            <article className="rounded-[16px] bg-[#faf7ff] px-4 py-4">
+                            <article className="rounded-[16px] bg-[#faf7ff] px-4 py-4 sm:min-h-[112px]">
                                 <p className={`${friendsBodyFont.className} text-[11px] uppercase tracking-[0.18em] text-[#8a7be5]`}>
                                     현재 목록
                                 </p>
@@ -102,11 +143,11 @@ export function FriendsContent({
                                     {filteredFriendCount}
                                 </p>
                             </article>
-                            <article className="rounded-[16px] bg-[#faf7ff] px-4 py-4">
+                            <article className="rounded-[16px] bg-[#faf7ff] px-4 py-4 sm:col-span-2 sm:min-h-[112px] lg:col-span-1">
                                 <p className={`${friendsBodyFont.className} text-[11px] uppercase tracking-[0.18em] text-[#8a7be5]`}>
                                     다음 단계
                                 </p>
-                                <p className={`${friendsDisplayFont.className} mt-2 text-[14px] leading-[1.5] text-[#111827]`}>
+                                <p className={`${friendsDisplayFont.className} mt-2 max-w-[24ch] text-[14px] leading-[1.55] text-[#111827] sm:max-w-none`}>
                                     친구를 눌러 chat 상세 화면으로 이동
                                 </p>
                             </article>
