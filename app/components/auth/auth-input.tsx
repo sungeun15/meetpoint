@@ -1,10 +1,6 @@
 import Image from "next/image";
-import { Coda } from "next/font/google";
 
-const coda = Coda({
-    weight: ["400", "800"],
-    subsets: ["latin"],
-});
+import { authDisplayFont } from "@/app/components/auth/fonts";
 
 type AuthInputProps = {
     type: "text" | "password";
@@ -44,7 +40,7 @@ export function AuthInput({
                 value={value}
                 onChange={(event) => onChange(event.target.value)}
                 placeholder={placeholder}
-                className={`${coda.className} ${inputClassName} ${hasLeadingIcon ? "px-11 sm:px-[46px]" : "px-4 sm:px-[24px]"}`}
+                className={`${authDisplayFont.className} ${inputClassName} ${hasLeadingIcon ? "px-11 sm:px-[46px]" : "px-4 sm:px-[24px]"}`}
             />
         </div>
     );

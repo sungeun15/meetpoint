@@ -1,4 +1,5 @@
 import { recommendationPlaceFixtures } from "@/fixtures/places";
+import { MAX_RECOMMENDATION_COUNT } from "@/lib/constants/recommendation";
 import {
     fetchPlaceCandidatesByRadius,
     KakaoLocalApiError,
@@ -286,7 +287,7 @@ export async function getRecommendations(input: {
                 candidates,
             }),
         ),
-    ).slice(0, 3);
+    ).slice(0, MAX_RECOMMENDATION_COUNT);
 
     return {
         midpoint,

@@ -12,7 +12,7 @@ export function SectionHeading({
     title,
     description,
     centered = false,
-    titleClassName = "text-[30px] leading-[1.08] tracking-[-0.03em] text-[#1a202c] sm:text-[34px]",
+    titleClassName = "text-[30px] leading-[1.12] tracking-[-0.02em] text-[#1a202c] sm:text-[34px]",
     descriptionClassName = "mt-4 text-[16px] leading-[1.8] text-[#4a5568] sm:text-[17px]",
 }: SectionHeadingProps) {
     return (
