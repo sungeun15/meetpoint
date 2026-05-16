@@ -1,5 +1,6 @@
 import "server-only";
 
+import type { FriendRelationState } from "@/lib/contracts/friends";
 import { getSupabaseAdminClient } from "@/lib/supabase/server";
 import type { UserSummary } from "@/lib/repositories/users";
 
@@ -7,6 +8,7 @@ type FriendRelationRow = {
     id: string;
     user_id: string;
     friend_id: string;
+    status: "pending" | "accepted";
     created_at: string;
 };
 
@@ -18,9 +20,20 @@ type FriendUserRow = {
     location_updated_at: string | null;
 };
 
+type AcceptFriendRequestRpcRow = {
+    request_id: string;
+    requester_id: string;
+};
+
 export type FriendListItem = {
     relationId: string;
     friend: UserSummary;
+};
+
+export type PendingFriendRequestListItem = {
+    requestId: string;
+    user: UserSummary;
+    requestedAt: string;
 };
 
 function mapFriendUserRow(row: FriendUserRow): UserSummary {
@@ -33,12 +46,51 @@ function mapFriendUserRow(row: FriendUserRow): UserSummary {
     };
 }
 
-// 친구 목록은 관계 row와 사용자 row를 분리 조회한 뒤 relationId 와 friend 요약으로 조합한다.
+async function listUsersByIds(userIds: string[]) {
+    if (!userIds.length) {
+        return new Map<string, UserSummary>();
+    }
+
+    const uniqueUserIds = [...new Set(userIds)];
+    const { data, error } = await getSupabaseAdminClient()
+        .from("users")
+        .select("id, nickname, lat, lng, location_updated_at")
+        .in("id", uniqueUserIds)
+        .returns<FriendUserRow[]>();
+
+    if (error) {
+        throw error;
+    }
+
+    return new Map(data.map((row) => [row.id, mapFriendUserRow(row)]));
+}
+
+async function listRelationRowsBetweenUsers(userId: string, friendUserId: string) {
+    const { data, error } = await getSupabaseAdminClient()
+        .from("friends")
+        .select("id, user_id, friend_id, status, created_at")
+        .in("user_id", [userId, friendUserId])
+        .in("friend_id", [userId, friendUserId])
+        .returns<FriendRelationRow[]>();
+
+    if (error) {
+        throw error;
+    }
+
+    return data.filter(
+        (relation) =>
+            (relation.user_id === userId && relation.friend_id === friendUserId)
+            || (relation.user_id === friendUserId && relation.friend_id === userId),
+    );
+}
+
+// 수락된 친구 목록은 현재 사용자 기준 accepted row만 조회한다.
 export async function listFriendsForUser(userId: string) {
     const { data: relations, error: relationsError } = await getSupabaseAdminClient()
         .from("friends")
-        .select("id, user_id, friend_id, created_at")
+        .select("id, user_id, friend_id, status, created_at")
         .eq("user_id", userId)
+        .eq("status", "accepted")
         .order("created_at", { ascending: false })
         .returns<FriendRelationRow[]>();
 
@@ -50,18 +102,7 @@ export async function listFriendsForUser(userId: string) {
         return [] satisfies FriendListItem[];
     }
 
-    const friendIds = relations.map((relation) => relation.friend_id);
-    const { data: friendUsers, error: friendUsersError } = await getSupabaseAdminClient()
-        .from("users")
-        .select("id, nickname, lat, lng, location_updated_at")
-        .in("id", friendIds)
-        .returns<FriendUserRow[]>();
-
-    if (friendUsersError) {
-        throw friendUsersError;
-    }
-
-    const friendById = new Map(friendUsers.map((friendUser) => [friendUser.id, mapFriendUserRow(friendUser)]));
+    const friendById = await listUsersByIds(relations.map((relation) => relation.friend_id));
 
     return relations.flatMap((relation) => {
         const friend = friendById.get(relation.friend_id);
@@ -70,59 +111,210 @@ export async function listFriendsForUser(userId: string) {
             return [];
         }
 
-        return [
-            {
-                relationId: relation.id,
-                friend,
-            },
-        ];
+        return [{
+            relationId: relation.id,
+            friend,
+        }] satisfies FriendListItem[];
     });
 }
 
-// 친구 추가는 양방향 row 두 건을 한 번의 upsert 로 맞춰 PRD의 복구/중복 처리 규칙을 함께 만족시킨다.
-export async function upsertFriendRelationPair(input: { userId: string; friendUserId: string }) {
+// pending 요청은 받은 요청과 보낸 요청을 분리해서 내려준다.
+export async function listPendingFriendRequestsForUser(userId: string) {
+    const [incomingResult, outgoingResult] = await Promise.all([
+        getSupabaseAdminClient()
+            .from("friends")
+            .select("id, user_id, friend_id, status, created_at")
+            .eq("friend_id", userId)
+            .eq("status", "pending")
+            .order("created_at", { ascending: false })
+            .returns<FriendRelationRow[]>(),
+        getSupabaseAdminClient()
+            .from("friends")
+            .select("id, user_id, friend_id, status, created_at")
+            .eq("user_id", userId)
+            .eq("status", "pending")
+            .order("created_at", { ascending: false })
+            .returns<FriendRelationRow[]>(),
+    ]);
+
+    if (incomingResult.error) {
+        throw incomingResult.error;
+    }
+
+    if (outgoingResult.error) {
+        throw outgoingResult.error;
+    }
+
+    const userById = await listUsersByIds([
+        ...incomingResult.data.map((relation) => relation.user_id),
+        ...outgoingResult.data.map((relation) => relation.friend_id),
+    ]);
+
+    const incoming = incomingResult.data.flatMap((relation) => {
+        const user = userById.get(relation.user_id);
+
+        if (!user) {
+            return [];
+        }
+
+        return [{
+            requestId: relation.id,
+            user,
+            requestedAt: relation.created_at,
+        }] satisfies PendingFriendRequestListItem[];
+    });
+
+    const outgoing = outgoingResult.data.flatMap((relation) => {
+        const user = userById.get(relation.friend_id);
+
+        if (!user) {
+            return [];
+        }
+
+        return [{
+            requestId: relation.id,
+            user,
+            requestedAt: relation.created_at,
+        }] satisfies PendingFriendRequestListItem[];
+    });
+
+    return { incoming, outgoing };
+}
+
+export async function getFriendRelationState(input: { userId: string; friendUserId: string }) {
+    const relations = await listRelationRowsBetweenUsers(input.userId, input.friendUserId);
+
+    if (!relations.length) {
+        return null;
+    }
+
+    const acceptedRelation = relations.find((relation) => relation.status === "accepted");
+
+    if (acceptedRelation) {
+        return {
+            state: "accepted",
+            requestId: acceptedRelation.id,
+        } as const satisfies { state: FriendRelationState; requestId: string };
+    }
+
+    const outgoingPending = relations.find(
+        (relation) =>
+            relation.status === "pending"
+            && relation.user_id === input.userId
+            && relation.friend_id === input.friendUserId,
+    );
+
+    if (outgoingPending) {
+        return {
+            state: "outgoing_pending",
+            requestId: outgoingPending.id,
+        } as const satisfies { state: FriendRelationState; requestId: string };
+    }
+
+    const incomingPending = relations.find(
+        (relation) =>
+            relation.status === "pending"
+            && relation.user_id === input.friendUserId
+            && relation.friend_id === input.userId,
+    );
+
+    if (incomingPending) {
+        return {
+            state: "incoming_pending",
+            requestId: incomingPending.id,
+        } as const satisfies { state: FriendRelationState; requestId: string };
+    }
+
+    return null;
+}
+
+export async function createFriendRequest(input: { userId: string; friendUserId: string }) {
     const { data, error } = await getSupabaseAdminClient()
         .from("friends")
-        .upsert(
-            [
-                {
-                    user_id: input.userId,
-                    friend_id: input.friendUserId,
-                },
-                {
-                    user_id: input.friendUserId,
-                    friend_id: input.userId,
-                },
-            ],
-            {
-                onConflict: "user_id,friend_id",
-            },
-        )
-        .select("id, user_id, friend_id, created_at")
+        .insert({
+            user_id: input.userId,
+            friend_id: input.friendUserId,
+            status: "pending",
+        })
+        .select("id, user_id, friend_id, status, created_at")
         .returns<FriendRelationRow[]>();
 
     if (error) {
         throw error;
     }
 
-    const currentUserRelation = data.find(
-        (relation) => relation.user_id === input.userId && relation.friend_id === input.friendUserId,
-    );
+    const createdRelation = data[0];
 
-    if (!currentUserRelation) {
-        throw new Error("현재 사용자 기준 친구 관계를 확인할 수 없습니다.");
+    if (!createdRelation) {
+        throw new Error("생성된 친구 요청을 확인할 수 없습니다.");
     }
 
-    return currentUserRelation.id;
+    return {
+        requestId: createdRelation.id,
+        requestedAt: createdRelation.created_at,
+    };
 }
 
-// 권한 검증은 현재 사용자 기준 단방향 관계 존재 여부만 확인하면 된다.
+export async function acceptFriendRequest(input: { requestId: string; currentUserId: string }) {
+    // pending row 갱신과 역방향 accepted row 생성을 DB 함수 안에서 함께 처리해 중간 불일치를 막는다.
+    const { data, error } = await getSupabaseAdminClient()
+        .rpc("accept_friend_request_atomic", {
+            input_request_id: input.requestId,
+            input_current_user_id: input.currentUserId,
+        });
+
+    if (error) {
+        throw error;
+    }
+
+    const acceptedRequest = Array.isArray(data)
+        ? (data[0] as AcceptFriendRequestRpcRow | undefined)
+        : undefined;
+
+    if (!acceptedRequest) {
+        return null;
+    }
+
+    return {
+        requestId: acceptedRequest.request_id,
+        requesterId: acceptedRequest.requester_id,
+    };
+}
+
+export async function rejectFriendRequest(input: { requestId: string; currentUserId: string }) {
+    const { data, error } = await getSupabaseAdminClient()
+        .from("friends")
+        .delete()
+        .eq("id", input.requestId)
+        .eq("friend_id", input.currentUserId)
+        .eq("status", "pending")
+        .select("id, user_id, friend_id, status, created_at")
+        .returns<FriendRelationRow[]>();
+
+    if (error) {
+        throw error;
+    }
+
+    const rejectedRelation = data[0];
+
+    if (!rejectedRelation) {
+        return null;
+    }
+
+    return {
+        requestId: rejectedRelation.id,
+        requesterId: rejectedRelation.user_id,
+    };
+}
+
+// 권한 검증은 현재 사용자 기준 accepted 단방향 관계 존재 여부만 확인하면 된다.
 export async function hasFriendRelation(userId: string, friendUserId: string) {
     const { data, error } = await getSupabaseAdminClient()
         .from("friends")
         .select("id")
         .eq("user_id", userId)
         .eq("friend_id", friendUserId)
+        .eq("status", "accepted")
         .limit(1)
         .maybeSingle<{ id: string }>();
 
