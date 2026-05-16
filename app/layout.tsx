@@ -1,6 +1,5 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
-import "pretendard/dist/web/static/pretendard.css";
 
 import { MainHeader } from "@/app/components/main-header";
 import { getCurrentSession } from "@/lib/auth/session";
@@ -34,6 +33,10 @@ export default async function RootLayout({
       lang="en"
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
     >
+      <head>
+        <link rel="preconnect" href="https://cdn.jsdelivr.net" />
+        <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/pretendard/dist/web/static/pretendard.css" />
+      </head>
       <body className="flex min-h-screen flex-col">
         <MainHeader isAuthenticated={Boolean(session)} userNickname={session?.nickname ?? null} />
         {children}
