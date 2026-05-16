@@ -32,6 +32,28 @@ function createPersonMarkerSvg(primaryColor: string, accentColor: string) {
     `)}`;
 }
 
+function createPersonGroupMarkerSvg(count: number) {
+    return `data:image/svg+xml;charset=UTF-8,${encodeURIComponent(`
+        <svg width="58" height="70" viewBox="0 0 58 70" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <defs>
+                <linearGradient id="personGroupGradient" x1="14" y1="12" x2="45" y2="51" gradientUnits="userSpaceOnUse">
+                    <stop stop-color="#8B5CF6"/>
+                    <stop offset="1" stop-color="#EC4899"/>
+                </linearGradient>
+            </defs>
+            <path d="M29 69C29 69 50 48.8 50 31.9C50 19.8 40.6 10 29 10C17.4 10 8 19.8 8 31.9C8 48.8 29 69 29 69Z" fill="url(#personGroupGradient)"/>
+            <circle cx="24" cy="29" r="13.5" fill="white" fill-opacity="0.96"/>
+            <circle cx="33.5" cy="25.5" r="11.5" fill="#FFF1F7" fill-opacity="0.94" stroke="#F472B6" stroke-width="1.5"/>
+            <circle cx="22" cy="24.5" r="4.8" fill="#4F46E5"/>
+            <path d="M14.5 35.5C16.5 31.5 19.2 29.5 22.6 29.5C26 29.5 28.7 31.5 30.7 35.5C31.2 36.5 30.5 37.7 29.4 37.7H15.8C14.7 37.7 14 36.5 14.5 35.5Z" fill="#4F46E5"/>
+            <circle cx="33.5" cy="22.4" r="4.2" fill="#DB2777"/>
+            <path d="M27.8 31.6C29.5 28.2 31.9 26.5 34.9 26.5C37.9 26.5 40.3 28.2 42 31.6C42.4 32.4 41.8 33.5 40.8 33.5H29C28 33.5 27.4 32.4 27.8 31.6Z" fill="#DB2777"/>
+            <circle cx="42.5" cy="16.5" r="7.5" fill="#111827"/>
+            <text x="42.5" y="19.4" text-anchor="middle" font-size="8.5" font-weight="800" fill="white" font-family="Arial, sans-serif">${count}</text>
+        </svg>
+    `)}`;
+}
+
 // 중심점 전용 마커 SVG를 생성합니다.
 function createMidpointMarkerSvg() {
     return `data:image/svg+xml;charset=UTF-8,${encodeURIComponent(`
@@ -127,6 +149,16 @@ export function createPersonMarkerImage(kakao: KakaoSdk, variant: PersonMarkerVa
         new kakao.maps.Size(52, 64),
         {
             offset: new kakao.maps.Point(26, 60),
+        },
+    );
+}
+
+export function createPersonGroupMarkerImage(kakao: KakaoSdk, count: number) {
+    return new kakao.maps.MarkerImage(
+        createPersonGroupMarkerSvg(count),
+        new kakao.maps.Size(58, 70),
+        {
+            offset: new kakao.maps.Point(29, 66),
         },
     );
 }

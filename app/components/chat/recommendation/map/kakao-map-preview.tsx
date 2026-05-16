@@ -121,22 +121,25 @@ export function KakaoMapPreview({
     useEffect(() => {
         let isMounted = true;
         let resizeObserver: ResizeObserver | null = null;
+        const container = mapContainerRef.current;
 
         async function renderMap() {
-            if (!mapContainerRef.current) {
+            if (!container) {
                 return;
             }
+
+            container.innerHTML = "";
 
             setStatus("loading");
             setErrorMessage(null);
 
             try {
-                if (!isMounted || !mapContainerRef.current) {
+                if (!isMounted) {
                     return;
                 }
 
                 const scene = await createRecommendationMapScene({
-                    container: mapContainerRef.current,
+                    container,
                     markers,
                     selectedMarkerId,
                     onMarkerSelect: (markerId) => {
@@ -172,6 +175,10 @@ export function KakaoMapPreview({
             resizeObserver?.disconnect();
             mapRef.current = null;
             kakaoRef.current = null;
+
+            if (container) {
+                container.innerHTML = "";
+            }
         };
     }, [markers, selectedMarkerId]);
 
