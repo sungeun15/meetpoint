@@ -1,7 +1,9 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
+import "pretendard/dist/web/static/pretendard.css";
 
 import { MainHeader } from "@/app/components/main-header";
+import { getCurrentSession } from "@/lib/auth/session";
 
 import "./globals.css";
 
@@ -20,18 +22,20 @@ export const metadata: Metadata = {
   description: "Meet smarter, meet faster.",
 };
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  const session = await getCurrentSession();
+
   return (
     <html
       lang="en"
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
     >
       <body className="flex min-h-screen flex-col">
-        <MainHeader />
+        <MainHeader isAuthenticated={Boolean(session)} userNickname={session?.nickname ?? null} />
         {children}
       </body>
     </html>

@@ -1,8 +1,12 @@
 import type { KakaoMapInstance } from "@/lib/kakao/map-loader";
 
-import { buildInfoWindowContent } from "./chat-recommendation-map-popup";
+import {
+    buildInfoWindowContent,
+    buildOverlappingPersonInfoWindowContentWithMidpoint,
+} from "./chat-recommendation-map-popup";
 import {
     createMarkerImage,
+    createPersonGroupMarkerImage,
     type KakaoMapSdkInstance,
 } from "./chat-recommendation-map-scene-helpers";
 import type { MapMarker } from "../../types";
@@ -16,6 +20,48 @@ export type RenderMarkersResult = {
     selectedPlaceMarkerPosition: KakaoLatLngInstance | null; // 선택된 장소 마커의 좌표입니다.
 };
 
+function resolveMarkerZIndex(marker: MapMarker) {
+    if (marker.markerType === "person") {
+        return 30;
+    }
+
+    if (marker.markerType === "midpoint") {
+        return 20;
+    }
+
+    return 10;
+}
+
+function buildCoordinateKey(marker: MapMarker) {
+    return `${marker.latitude.toFixed(6)}:${marker.longitude.toFixed(6)}`;
+}
+
+function buildOverlappingPersonMarkerGroups(markers: MapMarker[]) {
+    const groupedPersonMarkers = new Map<string, MapMarker[]>();
+
+    markers.forEach((marker) => {
+        if (marker.markerType !== "person") {
+            return;
+        }
+
+        const coordinateKey = buildCoordinateKey(marker);
+        const existingGroup = groupedPersonMarkers.get(coordinateKey);
+
+        if (existingGroup) {
+            existingGroup.push(marker);
+            return;
+        }
+
+        groupedPersonMarkers.set(coordinateKey, [marker]);
+    });
+
+    return groupedPersonMarkers;
+}
+
+function hasMidpointAtCoordinate(markers: MapMarker[], coordinateKey: string) {
+    return markers.some((marker) => marker.markerType === "midpoint" && buildCoordinateKey(marker) === coordinateKey);
+}
+
 // 지도 위에 모든 마커를 그린 뒤, 선택된 장소 마커 정보를 함께 반환합니다.
 export function renderMarkers(
     map: KakaoMapInstance,
@@ -28,8 +74,45 @@ export function renderMarkers(
     let selectedPlaceMarkerInstance: KakaoMarkerSceneInstance | null = null;
     let selectedPlaceMarkerData: MapMarker | null = null;
     let selectedPlaceMarkerPosition: KakaoLatLngInstance | null = null;
+    const overlappingPersonMarkerGroups = buildOverlappingPersonMarkerGroups(markers);
+    const renderedPersonGroupKeys = new Set<string>();
 
     markers.forEach((marker) => {
+        if (marker.markerType === "person") {
+            const coordinateKey = buildCoordinateKey(marker);
+            const overlappingGroup = overlappingPersonMarkerGroups.get(coordinateKey);
+
+            if (overlappingGroup && overlappingGroup.length > 1) {
+                if (renderedPersonGroupKeys.has(coordinateKey)) {
+                    return;
+                }
+
+                renderedPersonGroupKeys.add(coordinateKey);
+
+                const position = new kakao.maps.LatLng(marker.latitude, marker.longitude);
+                const markerInstance = new kakao.maps.Marker({
+                    map,
+                    position,
+                    title: `${overlappingGroup.length}명 함께 있는 위치`,
+                    image: createPersonGroupMarkerImage(kakao, overlappingGroup.length),
+                    zIndex: 35,
+                });
+                const midpointAtSameLocation = hasMidpointAtCoordinate(markers, coordinateKey);
+
+                kakao.maps.event.addListener(markerInstance, "click", () => {
+                    infoWindow.setContent(
+                        buildOverlappingPersonInfoWindowContentWithMidpoint(
+                            overlappingGroup,
+                            midpointAtSameLocation,
+                        ),
+                    );
+                    infoWindow.open(map, markerInstance);
+                });
+
+                return;
+            }
+        }
+
         // recommendation 모듈 공통 MapMarker를 Kakao 지도 객체와 이미지로 변환합니다.
         const position = new kakao.maps.LatLng(marker.latitude, marker.longitude);
         const image = createMarkerImage(kakao, marker);
@@ -39,6 +122,7 @@ export function renderMarkers(
             position,
             title: marker.label,
             image,
+            zIndex: resolveMarkerZIndex(marker),
         });
 
         // 장소 마커 클릭 시 선택 상태와 InfoWindow를 함께 갱신합니다.

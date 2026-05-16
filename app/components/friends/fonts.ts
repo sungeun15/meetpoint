@@ -1,16 +1,9 @@
-import { Amaranth, Coda, Inter } from "next/font/google";
+import {
+    pretendardBodyFont,
+    pretendardDisplayFont,
+    pretendardHeadingFont,
+} from "../shared/pretendard-fonts";
 
-export const friendsHeadingFont = Amaranth({
-    weight: ["400", "700"],
-    subsets: ["latin"],
-});
-
-export const friendsDisplayFont = Coda({
-    weight: ["400", "800"],
-    subsets: ["latin"],
-});
-
-export const friendsBodyFont = Inter({
-    weight: ["400", "500", "600"],
-    subsets: ["latin"],
-});
+export const friendsHeadingFont = pretendardHeadingFont;
+export const friendsDisplayFont = pretendardDisplayFont;
+export const friendsBodyFont = pretendardBodyFont;

@@ -45,8 +45,8 @@ export function RecommendationCardItem({
                 className="block w-full text-left"
             >
                 {/* 카드 본문 전체를 버튼처럼 동작시켜 클릭과 키보드 선택을 같은 흐름으로 처리합니다. */}
-                <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
-                    <div>
+                <div className="flex min-w-0 flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+                    <div className="min-w-0">
                         <p className={`${friendsHeadingFont.className} break-keep text-[14px] text-[#111827] sm:text-[18px] xl:text-[22px]`}>
                             {headerContent.title}
                         </p>
@@ -54,7 +54,7 @@ export function RecommendationCardItem({
                             {headerContent.category}
                         </p>
                     </div>
-                    <div className={`${friendsBodyFont.className} w-fit rounded-full bg-[#f3eeff] px-2 py-0.5 text-[8px] text-[#5f47d2] sm:hidden`}>
+                    <div className={`${friendsBodyFont.className} max-w-full self-start break-keep rounded-2xl bg-[#f3eeff] px-2 py-1 text-[8px] leading-[1.35] text-[#5f47d2] sm:hidden`}>
                         {headerContent.mobileMetaLabel}
                     </div>
                     {/* 데스크톱에서는 거리와 점수를 개별 배지로 분리해 한눈에 비교하기 쉽게 보여 줍니다. */}

@@ -6,8 +6,8 @@ export const EMPTY_RECOMMENDATION_RESULTS_MIN_HEIGHT_CLASS = "min-h-[180px] sm:m
 
 // 지도 bounds 재계산 시 패널 여백과 UI 오버레이를 고려한 padding 값입니다.
 export const MAP_BOUNDS_PADDING = {
-    top: 56,
-    right: 40,
-    bottom: 40,
-    left: 40,
+    top: 88,
+    right: 56,
+    bottom: 104,
+    left: 56,
 } as const;

@@ -19,8 +19,7 @@ type ChatRecommendationPanelsProps = {
     selectedCategory: RecommendationCategory; // 추천 카테고리 선택 상태입니다.
     departureInputMethod: DepartureInputMethod; // 출발 위치 입력 방식입니다.
     departureSearchQueries: Record<DepartureParty, string>; // 검색 입력창 값입니다.
-    visibleSavedDepartures: SavedDeparture[]; // 저장 위치 목록 또는 빈 미리보기 결과입니다.
-    isSavedDepartureEmptyPreview: boolean; // 저장 위치가 비어 있는 상태를 미리보기 중인지 나타냅니다.
+    visibleSavedDepartures: Record<DepartureParty, SavedDeparture[]>; // 참여자별 저장 위치 목록 또는 빈 미리보기 결과입니다.
     selectedSavedDepartureIds: Record<DepartureParty, string>; // 참여자별 선택된 저장 위치 id입니다.
     selectedDepartureLabels: Record<DepartureParty, string | null> | null; // 현재 추천에 사용될 출발지 라벨 요약입니다.
     selectedFriendName: string; // 출발지 설정 패널에 노출할 친구 이름입니다.
@@ -30,10 +29,12 @@ type ChatRecommendationPanelsProps = {
     onCategoryChange: (nextCategory: RecommendationCategory) => void; // 카테고리 변경 콜백입니다.
     onDepartureInputMethodChange: (nextMethod: DepartureInputMethod) => void; // 출발지 입력 방식 변경 콜백입니다.
     onDepartureSearchQueryChange: (party: DepartureParty, nextQuery: string) => void; // 참여자별 검색어 변경 콜백입니다.
-    onOpenSaveLocationLayer: (party: DepartureParty, previewValue: string, sourceLabel: string) => void; // 저장 위치 생성 레이어를 여는 콜백입니다.
-    onPinnedDepartureSelect: (party: DepartureParty, pinnedAddress: string) => void; // 핀 위치 선택 콜백입니다.
+    onOpenSaveLocationLayer: (party: DepartureParty, previewValue: string, sourceLabel: string, resolvedLocation?: import("../types").ResolvedLocation, locationKind?: "recent" | "preset") => void; // 저장 위치 생성 레이어를 여는 콜백입니다.
+    onPinnedDepartureSelect: (party: DepartureParty, pinnedLocation: import("../types").ResolvedLocation) => void; // 핀 위치 선택 콜백입니다.
     onSavedDepartureSelect: (party: DepartureParty, departureId: string) => void; // 저장 위치 선택 콜백입니다.
-    onSavedDepartureEmptyPreviewToggle: () => void; // 저장 위치 비우기 미리보기 토글 콜백입니다.
+    onDeleteSavedDeparture: (party: DepartureParty, departureId: string) => void; // 저장 위치 개별 삭제 콜백입니다.
+    onDeleteAllSavedDepartures: (party: DepartureParty) => void; // 참여자별 저장 위치 전체 삭제 콜백입니다.
+    onUpdateSavedDeparture: (party: DepartureParty, departureId: string, title: string, resolvedLocation: import("../types").ResolvedLocation) => Promise<boolean>; // 저장 위치 수정 콜백입니다.
     onRecommend: () => void; // 추천 실행 콜백입니다.
     hasRecommendations: boolean; // 실제 추천 결과가 존재하는지 나타냅니다.
     recommendationCards: RecommendationCard[]; // 추천 카드 목록입니다.
@@ -47,7 +48,6 @@ export function ChatRecommendationPanels({
     departureInputMethod,
     departureSearchQueries,
     visibleSavedDepartures,
-    isSavedDepartureEmptyPreview,
     selectedSavedDepartureIds,
     selectedDepartureLabels,
     selectedFriendName,
@@ -60,7 +60,9 @@ export function ChatRecommendationPanels({
     onOpenSaveLocationLayer,
     onPinnedDepartureSelect,
     onSavedDepartureSelect,
-    onSavedDepartureEmptyPreviewToggle,
+    onDeleteSavedDeparture,
+    onDeleteAllSavedDepartures,
+    onUpdateSavedDeparture,
     onRecommend,
     hasRecommendations,
     recommendationCards,
@@ -72,10 +74,10 @@ export function ChatRecommendationPanels({
     const activeRecommendationId = activeSelectionId && recommendationCards.some((card) => card.id === activeSelectionId)
         ? activeSelectionId
         : recommendationCards[0]?.id ?? null;
-    // 지도 강조 마커도 별도로 관리하되 목록과 동일한 기본 fallback을 갖습니다.
+    // 지도 포커스는 사용자가 직접 카드/칩을 고른 뒤에만 적용하고, 추천 직후에는 전체 마커 bounds를 유지합니다.
     const mapFocusedRecommendationId = focusedRecommendationId && recommendationCards.some((card) => card.id === focusedRecommendationId)
         ? focusedRecommendationId
-        : recommendationCards[0]?.id ?? null;
+        : null;
 
     // 결과 카드 선택은 리스트 활성 상태와 지도 포커스를 함께 바꿉니다.
     function handleRecommendationCardSelect(recommendationId: string) {
@@ -95,15 +97,15 @@ export function ChatRecommendationPanels({
     }
 
     return (
-        <div className="grid gap-2 sm:gap-3 lg:grid-cols-[minmax(0,1.14fr)_minmax(0,0.86fr)] lg:items-start lg:gap-4 xl:grid-cols-[minmax(0,0.94fr)_minmax(0,1.06fr)]">
+        <div className="grid gap-2 sm:gap-3 lg:grid-cols-[minmax(0,1.14fr)_minmax(0,0.86fr)] lg:items-stretch lg:gap-4 xl:grid-cols-[minmax(0,0.94fr)_minmax(0,1.06fr)]">
             <div className="lg:col-span-2">
                 <ChatDepartureSettingsPanel
+                    key={`${selectedFriendName}:${departureInputMethod}`}
                     meetingMode={meetingMode}
                     selectedCategory={selectedCategory}
                     departureInputMethod={departureInputMethod}
                     departureSearchQueries={departureSearchQueries}
                     visibleSavedDepartures={visibleSavedDepartures}
-                    isSavedDepartureEmptyPreview={isSavedDepartureEmptyPreview}
                     selectedSavedDepartureIds={selectedSavedDepartureIds}
                     selectedDepartureLabels={selectedDepartureLabels}
                     selectedFriendName={selectedFriendName}
@@ -115,12 +117,14 @@ export function ChatRecommendationPanels({
                     onOpenSaveLocationLayer={onOpenSaveLocationLayer}
                     onPinnedDepartureSelect={onPinnedDepartureSelect}
                     onSavedDepartureSelect={onSavedDepartureSelect}
-                    onSavedDepartureEmptyPreviewToggle={onSavedDepartureEmptyPreviewToggle}
+                    onDeleteSavedDeparture={onDeleteSavedDeparture}
+                    onDeleteAllSavedDepartures={onDeleteAllSavedDepartures}
+                    onUpdateSavedDeparture={onUpdateSavedDeparture}
                     onRecommend={onRecommend}
                 />
             </div>
 
-            <div className="min-w-0 xl:sticky xl:top-4 xl:self-start">
+            <div className="min-w-0 h-full xl:sticky xl:top-4">
                 <ChatRecommendationResultsPanel
                     meetingMode={meetingMode}
                     recommendationSummary={recommendationSummary}
@@ -131,7 +135,7 @@ export function ChatRecommendationPanels({
                 />
             </div>
 
-            <div className="min-w-0">
+            <div className="min-w-0 h-full">
                 <ChatRecommendationMapPanel
                     recommendationSummary={recommendationSummary}
                     hasRecommendations={hasRecommendations}

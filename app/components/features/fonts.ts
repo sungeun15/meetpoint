@@ -1,11 +1,7 @@
-import { Inter, Poppins } from "next/font/google";
+import {
+    pretendardBodyFont,
+    pretendardHeadingFont,
+} from "../shared/pretendard-fonts";
 
-export const featuresInter = Inter({
-    weight: ["400", "500", "600"],
-    subsets: ["latin"],
-});
-
-export const featuresPoppins = Poppins({
-    weight: ["500", "600"],
-    subsets: ["latin"],
-});
+export const featuresInter = pretendardBodyFont;
+export const featuresPoppins = pretendardHeadingFont;

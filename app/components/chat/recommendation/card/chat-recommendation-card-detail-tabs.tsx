@@ -22,7 +22,7 @@ export function RecommendationCardDetailTabs({ recommendationCard, isSelected }:
     return (
         <>
             {/* 모바일에서는 탭 버튼으로 한 번에 한 섹션만 보여 줘 카드 높이를 줄입니다. */}
-            <div className="mt-1.5 flex gap-1 sm:hidden">
+            <div className="mt-1.5 flex flex-wrap gap-1 sm:hidden">
                 {detailSections.map((section) => (
                     <button
                         key={section.id}
@@ -40,11 +40,11 @@ export function RecommendationCardDetailTabs({ recommendationCard, isSelected }:
             </div>
 
             {/* 현재 선택된 모바일 탭 한 개만 본문으로 노출합니다. */}
-            <div className={`mt-1.5 rounded-[14px] px-2 py-1.5 sm:hidden ${activeMobileContent.toneClassName}`}>
+            <div className={`mt-1.5 min-w-0 rounded-[14px] px-2 py-1.5 sm:hidden ${activeMobileContent.toneClassName}`}>
                 <p className={`${friendsBodyFont.className} text-[10px] uppercase tracking-[0.16em] ${activeMobileContent.accentClassName}`}>
                     {activeMobileContent.label}
                 </p>
-                <p className={`${friendsDisplayFont.className} mt-1 text-[10px] leading-[1.4] ${activeMobileContent.textClassName}`}>
+                <p className={`${friendsDisplayFont.className} mt-1 break-keep text-[10px] leading-[1.4] ${activeMobileContent.textClassName}`}>
                     {activeMobileContent.value}
                 </p>
             </div>

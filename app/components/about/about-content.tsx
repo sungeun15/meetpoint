@@ -15,7 +15,7 @@ export function AboutContent() {
                     About MeetPoint
                 </p>
                 <h1
-                    className={`${aboutPoppins.className} mt-5 text-[clamp(2.3rem,9vw,4rem)] leading-[1.08] tracking-[-0.03em] text-[#24145f] sm:mt-6`}
+                    className={`${aboutPoppins.className} mt-5 text-[clamp(2.3rem,9vw,4rem)] leading-[1.12] tracking-[-0.022em] text-[#24145f] sm:mt-6`}
                 >
                     One flow for fair meetups, whether you meet now or later.
                 </h1>

@@ -1,3 +1,5 @@
+export { MAX_RECOMMENDATION_COUNT } from "@/lib/constants/recommendation";
+
 import type { LocationPoint, RecommendationCategory } from "../types";
 
 // 카테고리 enum 값을 사용자 노출용 한글 라벨로 바꿉니다.
@@ -21,9 +23,6 @@ export const defaultMapCenter: LocationPoint = {
     latitude: 37.5665,
     longitude: 126.978,
 };
-
-// 한 번의 추천에서 화면에 노출할 최대 장소 수입니다.
-export const MAX_RECOMMENDATION_COUNT = 10;
 
 // 카테고리별 추천 후보 템플릿 목록입니다.
 export const recommendationTemplates: Record<RecommendationCategory, RecommendationTemplate[]> = {

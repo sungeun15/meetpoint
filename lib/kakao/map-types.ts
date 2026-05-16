@@ -148,6 +148,7 @@ export type KakaoMapSdk = {
             position: KakaoLatLng;
             title?: string;
             image?: KakaoMarkerImage;
+            zIndex?: number;
         }) => KakaoMarkerInstance;
         Polyline: new (options: {
             map?: KakaoMapInstance;

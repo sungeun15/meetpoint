@@ -1,10 +1,16 @@
 import { loadKakaoMapSdk, type KakaoMapInstance } from "@/lib/kakao/map-loader";
 import { MAP_BOUNDS_PADDING } from "../chat-recommendation-layout";
 import { defaultMapCenter } from "../chat-recommendation-data";
-import { createMidpointMarkerImage, createPersonMarkerImage, createPlaceMarkerImage } from "./kakao-marker-icons";
+import {
+    createMidpointMarkerImage,
+    createPersonGroupMarkerImage,
+    createPersonMarkerImage,
+    createPlaceMarkerImage,
+} from "./kakao-marker-icons";
 import type { MapMarker } from "../../types";
 
 export type KakaoMapSdkInstance = Awaited<ReturnType<typeof loadKakaoMapSdk>>;
+export { createPersonGroupMarkerImage };
 
 type ConnectionSegment = {
     path: ReturnType<typeof buildCurvedSegmentPath>; // 지도에 그릴 곡선 경로 좌표입니다.

@@ -22,7 +22,7 @@ export function RecommendationResultsIntro({ hasRecommendations }: Recommendatio
 
     return (
         <>
-            <p className={`${friendsHeadingFont.className} text-[16px] text-[#111827] sm:text-[20px]`}>
+            <p className={`${friendsHeadingFont.className} text-[13px] text-[#111827] sm:text-[15px]`}>
                 {presenter.title}
             </p>
             <p className={`${friendsDisplayFont.className} mt-2 hidden text-[13px] leading-[1.6] text-[#5f6782] sm:block sm:text-[14px]`}>
@@ -56,7 +56,7 @@ export function RecommendationResultsBody({
 
     if (hasRecommendations) {
         return (
-            <div className="grid gap-3">
+            <div className="min-w-0 grid gap-3">
                 <RecommendationSummaryCard recommendationSummary={recommendationSummary} />
                 <RecommendationCardList
                     recommendationCards={recommendationCards}
@@ -74,7 +74,7 @@ export function RecommendationResultsBody({
             <p className={`${friendsHeadingFont.className} break-keep text-[15px] text-[#111827] sm:text-[20px] lg:text-[22px]`}>
                 {emptyPresenter.title}
             </p>
-            <p className={`${friendsDisplayFont.className} break-keep mt-1 text-[11px] leading-[1.5] text-[#6b7280] sm:mt-2 sm:text-[14px] lg:text-[15px]`}>
+            <p className={`${friendsDisplayFont.className} break-keep mt-1 text-[11px] leading-normal text-[#6b7280] sm:mt-2 sm:text-[14px] lg:text-[15px]`}>
                 {emptyPresenter.copy}
             </p>
         </div>

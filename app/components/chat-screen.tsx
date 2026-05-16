@@ -8,7 +8,7 @@ import { ChatLocationStatusPanel } from "./chat/chat-location-status-panel";
 import { ChatRecommendationPanels } from "./chat/recommendation/chat-recommendation-panels";
 import { ChatSaveLocationLayer } from "./chat/chat-save-location-layer";
 import { useChatScreenState } from "./chat/use-chat-screen-state";
-import type { DepartureParty } from "./chat/types";
+import type { DepartureParty, ResolvedLocation } from "./chat/types";
 import { FriendsSidebar } from "./friends/friends-sidebar";
 
 type ChatScreenProps = {
@@ -20,6 +20,8 @@ type PendingLocationSave = {
     previewValue: string;
     sourceLabel: string;
     title: string;
+    resolvedLocation: ResolvedLocation | null;
+    locationKind: "recent" | "preset";
 };
 
 export function ChatScreen({ requestedFriendId = null }: ChatScreenProps) {
@@ -38,13 +40,13 @@ export function ChatScreen({ requestedFriendId = null }: ChatScreenProps) {
         feedbackMessage,
         myLocationStatus,
         friendLocationStatus,
+        mySharedLocation,
         lastSharedAt,
         meetingMode,
         selectedCategory,
         departureInputMethod,
         departureSearchQueries,
         visibleSavedDepartures,
-        isSavedDepartureEmptyPreview,
         selectedSavedDepartureIds,
         selectedDepartureLabels,
         recommendationSummary,
@@ -64,17 +66,28 @@ export function ChatScreen({ requestedFriendId = null }: ChatScreenProps) {
         handleDepartureSearchQueryChange,
         handlePinnedDepartureSelect,
         handleSavedDepartureSelect,
-        handleSavedDepartureEmptyPreviewToggle,
+        handleDeleteSavedDeparture,
+        handleDeleteAllSavedDepartures,
+        handleUpdateSavedDeparture,
         handleCreateSavedDeparture,
         handleRecommend,
     } = useChatScreenState(requestedFriendId);
+    const friendLastSharedAt = selectedFriend?.locationSnapshot?.sharedAt ?? null;
 
-    function handleOpenSaveLocationLayer(party: DepartureParty, previewValue: string, sourceLabel: string) {
+    function handleOpenSaveLocationLayer(
+        party: DepartureParty,
+        previewValue: string,
+        sourceLabel: string,
+        resolvedLocation?: ResolvedLocation,
+        locationKind: "recent" | "preset" = "preset",
+    ) {
         setPendingLocationSave({
             party,
             previewValue,
             sourceLabel,
             title: party === "me" ? "내 위치 저장" : "친구 위치 저장",
+            resolvedLocation: resolvedLocation ?? null,
+            locationKind,
         });
     }
 
@@ -82,16 +95,18 @@ export function ChatScreen({ requestedFriendId = null }: ChatScreenProps) {
         setPendingLocationSave(null);
     }
 
-    function handleConfirmSaveLocation(nextTitle: string) {
+    async function handleConfirmSaveLocation(nextTitle: string) {
         if (!pendingLocationSave) {
             return;
         }
 
-        const didSave = handleCreateSavedDeparture(
+        const didSave = await handleCreateSavedDeparture(
             pendingLocationSave.party,
             nextTitle,
             pendingLocationSave.previewValue,
             pendingLocationSave.sourceLabel,
+            pendingLocationSave.resolvedLocation,
+            pendingLocationSave.locationKind,
         );
 
         if (didSave) {
@@ -158,10 +173,10 @@ export function ChatScreen({ requestedFriendId = null }: ChatScreenProps) {
     }, []);
 
     return (
-        <section className="flex min-h-[calc(100vh-72px)] flex-1 bg-[#eeebff] px-2.5 py-2.5 sm:px-4 sm:py-4 md:min-h-[calc(100vh-84px)] md:px-5 md:py-5 lg:px-6 lg:py-6 xl:px-7 xl:py-8">
-            <div className="mx-auto grid w-full max-w-[1440px] gap-2 sm:gap-3 xl:gap-4">
-                <div className="grid gap-2.5 sm:gap-4 lg:grid-cols-[280px_minmax(0,1fr)] lg:items-start xl:grid-cols-[320px_minmax(0,1fr)] xl:gap-5">
-                    <div ref={sidebarPanelRef} className="xl:h-(--friends-panel-height) xl:min-h-0">
+        <section className="flex min-h-[calc(100vh-72px)] flex-1 overflow-x-hidden bg-[#eeebff] px-2.5 py-2.5 sm:px-4 sm:py-4 md:min-h-[calc(100vh-84px)] md:px-5 md:py-5 lg:px-6 lg:py-6 xl:px-7 xl:py-8">
+            <div className="mx-auto grid min-w-0 w-full max-w-360 gap-2 sm:gap-3 xl:gap-4">
+                <div className="grid min-w-0 gap-2.5 sm:gap-4 lg:grid-cols-[280px_minmax(0,1fr)] lg:items-start xl:grid-cols-[320px_minmax(0,1fr)] xl:gap-5">
+                    <div ref={sidebarPanelRef} className="min-w-0 xl:h-(--friends-panel-height) xl:min-h-0">
                         <FriendsSidebar
                             friendSearch={friendSearch}
                             onFriendSearchChange={setFriendSearch}
@@ -177,8 +192,8 @@ export function ChatScreen({ requestedFriendId = null }: ChatScreenProps) {
                     </div>
 
                     {selectedFriend ? (
-                        <div ref={topPanelsRef} className="grid gap-2.5 sm:gap-4 xl:gap-5">
-                            <ChatHeaderCard selectedFriend={selectedFriend} lastSharedAt={lastSharedAt} />
+                        <div ref={topPanelsRef} className="grid min-w-0 gap-2.5 sm:gap-4 xl:gap-5">
+                            <ChatHeaderCard selectedFriend={selectedFriend} lastSharedAt={friendLastSharedAt} />
 
                             <ChatConversationPanel
                                 selectedFriend={selectedFriend}
@@ -195,6 +210,20 @@ export function ChatScreen({ requestedFriendId = null }: ChatScreenProps) {
                                 lastSharedAt={lastSharedAt}
                                 canSaveMyLocation={hasMyLocationStatusData}
                                 canSaveFriendLocation={hasFriendLocationStatusData}
+                                myLocationPreviewValue={mySharedLocation?.address ?? ""}
+                                friendLocationPreviewValue={selectedFriend.locationSnapshot?.address ?? ""}
+                                myResolvedLocation={mySharedLocation ? {
+                                    label: mySharedLocation.label,
+                                    address: mySharedLocation.address,
+                                    latitude: mySharedLocation.latitude,
+                                    longitude: mySharedLocation.longitude,
+                                } : null}
+                                friendResolvedLocation={selectedFriend.locationSnapshot ? {
+                                    label: `${selectedFriend.nickname} 현재 위치`,
+                                    address: selectedFriend.locationSnapshot.address,
+                                    latitude: selectedFriend.locationSnapshot.latitude,
+                                    longitude: selectedFriend.locationSnapshot.longitude,
+                                } : null}
                                 onShareLocation={handleShareLocation}
                                 onOpenSaveLocationLayer={handleOpenSaveLocationLayer}
                             />
@@ -209,7 +238,6 @@ export function ChatScreen({ requestedFriendId = null }: ChatScreenProps) {
                         departureInputMethod={departureInputMethod}
                         departureSearchQueries={departureSearchQueries}
                         visibleSavedDepartures={visibleSavedDepartures}
-                        isSavedDepartureEmptyPreview={isSavedDepartureEmptyPreview}
                         selectedSavedDepartureIds={selectedSavedDepartureIds}
                         selectedDepartureLabels={selectedDepartureLabels}
                         selectedFriendName={selectedFriend.nickname}
@@ -222,7 +250,9 @@ export function ChatScreen({ requestedFriendId = null }: ChatScreenProps) {
                         onOpenSaveLocationLayer={handleOpenSaveLocationLayer}
                         onPinnedDepartureSelect={handlePinnedDepartureSelect}
                         onSavedDepartureSelect={handleSavedDepartureSelect}
-                        onSavedDepartureEmptyPreviewToggle={handleSavedDepartureEmptyPreviewToggle}
+                        onDeleteSavedDeparture={handleDeleteSavedDeparture}
+                        onDeleteAllSavedDepartures={handleDeleteAllSavedDepartures}
+                        onUpdateSavedDeparture={handleUpdateSavedDeparture}
                         onRecommend={handleRecommend}
                         hasRecommendations={hasRecommendations}
                         recommendationCards={recommendationCards}

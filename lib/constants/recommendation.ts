@@ -1,0 +1,1 @@
+export const MAX_RECOMMENDATION_COUNT = 10;

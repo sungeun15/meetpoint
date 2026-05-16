@@ -58,8 +58,8 @@ export function validatePassword(value: string) {
         throw new InputValidationError("비밀번호는 문자열이어야 합니다.");
     }
 
-    if (value.length < 8 || value.length > 20) {
-        throw new InputValidationError("비밀번호는 8자 이상 20자 이하만 허용합니다.");
+    if (value.length < 4 || value.length > 20) {
+        throw new InputValidationError("비밀번호는 4자 이상 20자 이하만 허용합니다.");
     }
 
     if (/\s/.test(value)) {
