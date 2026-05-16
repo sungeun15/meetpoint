@@ -1,13 +1,13 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useRef, useState } from "react";
 
 import type { KakaoMapInstance, KakaoMarkerInstance } from "@/lib/kakao/map-loader";
 import { loadKakaoMapSdk } from "@/lib/kakao/map-loader";
 import { friendsBodyFont, friendsHeadingFont } from "../friends/fonts";
-import { ChatModalShell } from "./chat-modal-shell";
+import { ModalShell } from "../shared/modal-shell";
 import { createPersonMarkerImage } from "./recommendation/map/kakao-marker-icons";
-import type { DepartureParty } from "./types";
+import type { DepartureParty, ResolvedLocation } from "./types";
 
 type PendingPinSelection = {
     address: string;
@@ -53,11 +53,34 @@ type PinMapObjects = {
 type ChatPinPickerLayerProps = {
     party: DepartureParty;
     partyLabel: string;
+    title?: string;
+    description?: string;
+    confirmLabel?: string;
+    selectionPrompt?: string;
+    emptySelectionMessage?: string;
+    initialLocation?: ResolvedLocation | null;
+    editableTitle?: {
+        initialValue: string;
+        label: string;
+        placeholder: string;
+    };
     onClose: () => void;
-    onConfirm: (address: string) => void;
+    onConfirm: (location: ResolvedLocation, nextTitle?: string) => void;
 };
 
-export function ChatPinPickerLayer({ party, partyLabel, onClose, onConfirm }: ChatPinPickerLayerProps) {
+export function ChatPinPickerLayer({
+    party,
+    partyLabel,
+    title,
+    description,
+    confirmLabel = "확인",
+    selectionPrompt,
+    emptySelectionMessage,
+    initialLocation = null,
+    editableTitle,
+    onClose,
+    onConfirm,
+}: ChatPinPickerLayerProps) {
     const visibleSearchResultLimit = 8;
     const mapContainerRef = useRef<HTMLDivElement | null>(null);
     const mapObjectsRef = useRef<PinMapObjects | null>(null);
@@ -67,6 +90,7 @@ export function ChatPinPickerLayer({ party, partyLabel, onClose, onConfirm }: Ch
     const [searchFeedbackMessage, setSearchFeedbackMessage] = useState<string | null>(null);
     const [isSearching, setIsSearching] = useState(false);
     const [pendingSelection, setPendingSelection] = useState<PendingPinSelection | null>(null);
+    const [draftTitle, setDraftTitle] = useState(editableTitle?.initialValue ?? "");
 
     function applyPendingSelection(address: string, latitude: number, longitude: number) {
         const mapObjects = mapObjectsRef.current;
@@ -207,6 +231,28 @@ export function ChatPinPickerLayer({ party, partyLabel, onClose, onConfirm }: Ch
                         setSearchFeedbackMessage("지도에서 위치를 선택했어요. 아래에서 확인해 주세요.");
                     });
                 });
+
+                if (initialLocation) {
+                    const initialPosition = new kakao.maps.LatLng(initialLocation.latitude, initialLocation.longitude);
+                    map.setCenter(initialPosition);
+                    map.setLevel(3);
+                    marker.setPosition(initialPosition);
+                    marker.setMap(map);
+
+                    geocoder.coord2Address(initialLocation.longitude, initialLocation.latitude, (result, status) => {
+                        if (isDisposed) {
+                            return;
+                        }
+
+                        const resolvedAddress = status === kakao.maps.services.Status.OK && result[0]
+                            ? result[0].road_address?.address_name ?? result[0].address?.address_name ?? initialLocation.address
+                            : initialLocation.address;
+
+                        applyPendingSelection(resolvedAddress, initialLocation.latitude, initialLocation.longitude);
+                        setSearchQuery(resolvedAddress);
+                        setSearchFeedbackMessage("현재 저장된 위치를 불러왔어요. 주소를 검색하거나 지도를 눌러 다시 지정해 주세요.");
+                    });
+                }
             } catch (error) {
                 if (!isDisposed) {
                     setMapErrorMessage(error instanceof Error ? error.message : "지도를 불러오지 못했어요.");
@@ -220,12 +266,12 @@ export function ChatPinPickerLayer({ party, partyLabel, onClose, onConfirm }: Ch
             isDisposed = true;
             mapObjectsRef.current = null;
         };
-    }, [party]);
+    }, [initialLocation, party]);
 
     return (
-        <ChatModalShell
-            title={`${partyLabel} 핀 찍기`}
-            description="카카오맵에서 위치를 누르거나 주소를 검색해서 고를 수 있어요."
+        <ModalShell
+            title={title ?? `${partyLabel} 핀 찍기`}
+            description={description ?? "카카오맵에서 위치를 누르거나 주소를 검색해서 고를 수 있어요."}
             onClose={onClose}
             overlayClassName="z-81 bg-[#0f1020]/60"
             panelClassName="max-w-215 rounded-[26px] shadow-[0px_24px_70px_rgba(15,16,32,0.32)]"
@@ -300,6 +346,20 @@ export function ChatPinPickerLayer({ party, partyLabel, onClose, onConfirm }: Ch
                             선택한 위치 확인
                         </p>
 
+                        {editableTitle ? (
+                            <label className="mt-3 block">
+                                <span className={`${friendsBodyFont.className} text-[12px] text-[#6b7280] sm:text-[13px]`}>
+                                    {editableTitle.label}
+                                </span>
+                                <input
+                                    value={draftTitle}
+                                    onChange={(event) => setDraftTitle(event.target.value)}
+                                    placeholder={editableTitle.placeholder}
+                                    className={`${friendsBodyFont.className} mt-2 h-11 w-full rounded-xl border border-[#ddd7ff] bg-[#faf8ff] px-4 text-[14px] text-[#111827] outline-none transition focus:border-[#6c5ce7]`}
+                                />
+                            </label>
+                        ) : null}
+
                         {mapErrorMessage ? (
                             <p className={`${friendsBodyFont.className} mt-3 text-[12px] leading-[1.6] text-[#d14343] sm:text-[13px]`}>
                                 {mapErrorMessage}
@@ -309,7 +369,7 @@ export function ChatPinPickerLayer({ party, partyLabel, onClose, onConfirm }: Ch
                         {pendingSelection ? (
                             <>
                                 <p className={`${friendsBodyFont.className} mt-3 text-[12px] text-[#6b7280] sm:text-[13px]`}>
-                                    이 위치를 {partyLabel} 출발 위치로 지정할까요?
+                                    {selectionPrompt ?? `이 위치를 ${partyLabel} 출발 위치로 지정할까요?`}
                                 </p>
                                 <p className={`${friendsHeadingFont.className} mt-2 break-keep text-[15px] leading-[1.55] text-[#111827] sm:text-[16px]`}>
                                     {pendingSelection.address}
@@ -327,21 +387,27 @@ export function ChatPinPickerLayer({ party, partyLabel, onClose, onConfirm }: Ch
                                     </button>
                                     <button
                                         type="button"
-                                        onClick={() => onConfirm(pendingSelection.address)}
+                                        onClick={() => onConfirm({
+                                            label: pendingSelection.address,
+                                            address: pendingSelection.address,
+                                            latitude: pendingSelection.latitude,
+                                            longitude: pendingSelection.longitude,
+                                        }, editableTitle ? draftTitle : undefined)}
+                                        disabled={Boolean(editableTitle && !draftTitle.trim())}
                                         className={`${friendsHeadingFont.className} min-h-11 flex-1 rounded-xl bg-[#6c5ce7] px-4 py-2 text-[14px] font-bold text-white transition-colors hover:bg-[#5b4ad2]`}
                                     >
-                                        확인
+                                        {confirmLabel}
                                     </button>
                                 </div>
                             </>
                         ) : (
                             <p className={`${friendsBodyFont.className} mt-3 text-[12px] leading-[1.6] text-[#6b7280] sm:text-[13px]`}>
-                                아직 고른 위치가 없어요. 지도에서 원하는 지점을 눌러 주세요.
+                                {emptySelectionMessage ?? "아직 고른 위치가 없어요. 지도에서 원하는 지점을 눌러 주세요."}
                             </p>
                         )}
                     </div>
                 </div>
             </div>
-        </ChatModalShell>
+        </ModalShell>
     );
 }
