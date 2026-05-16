@@ -17,7 +17,7 @@ export function FriendAddConfirmLayer({
 }: FriendAddConfirmLayerProps) {
     return (
         <ModalShell
-            title="친구 등록 확인"
+            title="친구 요청 보내기"
             onClose={onClose}
             panelClassName="max-w-lg"
             contentClassName="space-y-4"
@@ -30,7 +30,7 @@ export function FriendAddConfirmLayer({
                     {friend.nickname}
                 </p>
                 <p className={`${friendsDisplayFont.className} mt-2 text-[14px] leading-[1.6] text-[#4f5875]`}>
-                    친구로 등록 하겠습니까?
+                    이 사용자에게 친구 요청을 보내시겠어요?
                 </p>
                 <p className={`${friendsBodyFont.className} mt-2 text-[13px] leading-[1.65] text-[#6b7280]`}>
                     {friend.locationHint}
@@ -52,7 +52,7 @@ export function FriendAddConfirmLayer({
                     disabled={isSubmitting}
                     className={`${friendsHeadingFont.className} min-h-11 flex-1 rounded-xl bg-[#6c5ce7] px-4 py-2 text-[14px] font-bold text-white transition-colors hover:bg-[#5b4ad2] disabled:cursor-not-allowed disabled:opacity-60`}
                 >
-                    {isSubmitting ? "등록 중..." : "친구 등록"}
+                    {isSubmitting ? "요청 전송 중..." : "친구 요청 보내기"}
                 </button>
             </div>
         </ModalShell>

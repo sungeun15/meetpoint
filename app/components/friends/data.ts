@@ -1,7 +1,7 @@
 import type { FriendItem } from "./types";
 
-export const friendsGradientBackground =
-    "linear-gradient(198.712deg, rgb(102, 117, 247) 0%, rgb(87, 0, 123) 100%)";
+export const friendsGradientBackgroundClassName =
+    "bg-[linear-gradient(198.712deg,_rgb(102,117,247)_0%,_rgb(87,0,123)_100%)]";
 
 export const initialFriends: FriendItem[] = [
     {

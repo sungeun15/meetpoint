@@ -4,6 +4,7 @@ import type { FormEvent } from "react";
 import { useEffect, useMemo, useState } from "react";
 
 import type { ApiResponse } from "@/lib/contracts/api";
+import type { FriendsListResponse } from "@/lib/contracts/friends";
 
 import {
     buildFriendLocationStatus,
@@ -14,16 +15,8 @@ import {
 import { formatLocationPreview } from "./data";
 import type { ChatMessage, ResolvedLocation } from "./types";
 import type { FriendItem } from "../friends/types";
+import { formatLocationUpdatedLabel, mapFriendSummaryToItem } from "../friends/mappers";
 import { useRecommendationFlowState } from "./recommendation/use-recommendation-flow-state";
-
-type FriendSummary = {
-    id: string;
-    relationId?: string;
-    nickname: string;
-    lat: number | null;
-    lng: number | null;
-    locationUpdatedAt: string | null;
-};
 
 type MessageItem = {
     id: string;
@@ -31,10 +24,6 @@ type MessageItem = {
     receiverId: string;
     content: string;
     createdAt: string;
-};
-
-type FriendsListResponse = {
-    friends: FriendSummary[];
 };
 
 type MessagesListResponse = {
@@ -66,51 +55,6 @@ type LocationLookupResponse = {
 const DEFAULT_MESSAGE_POLLING_INTERVAL_MS = 5000;
 const DEFAULT_FRIENDS_POLLING_INTERVAL_MS = 5000;
 
-function formatLocationUpdatedLabel(locationUpdatedAt: string | null) {
-    if (!locationUpdatedAt) {
-        return null;
-    }
-
-    const date = new Date(locationUpdatedAt);
-
-    if (Number.isNaN(date.getTime())) {
-        return "최근";
-    }
-
-    return new Intl.DateTimeFormat("ko-KR", {
-        month: "numeric",
-        day: "numeric",
-        hour: "numeric",
-        minute: "2-digit",
-    }).format(date);
-}
-
-function mapFriendSummaryToItem(friend: FriendSummary): FriendItem {
-    const updatedLabel = formatLocationUpdatedLabel(friend.locationUpdatedAt);
-    const latitude = friend.lat;
-    const longitude = friend.lng;
-    const hasLocation = latitude !== null && longitude !== null;
-
-    return {
-        id: friend.id,
-        nickname: friend.nickname,
-        status: hasLocation
-            ? (updatedLabel ? `${updatedLabel} 위치를 공유했어요` : "최근 위치를 공유했어요")
-            : "아직 위치를 공유하지 않았어요",
-        locationHint: hasLocation
-            ? `현재 저장된 좌표는 ${latitude.toFixed(5)}, ${longitude.toFixed(5)} 입니다.`
-            : "위치 공유를 시작하면 chat 화면에서 좌표와 상태를 확인할 수 있어요.",
-        locationSnapshot: hasLocation
-            ? {
-                address: `좌표 ${latitude.toFixed(5)}, ${longitude.toFixed(5)}`,
-                latitude,
-                longitude,
-                sharedAt: updatedLabel,
-            }
-            : undefined,
-    };
-}
-
 function formatMessageTime(createdAt: string) {
     const date = new Date(createdAt);
 
@@ -137,16 +81,24 @@ function mapMessageItemToChatMessage(message: MessageItem, friendId: string): Ch
 
 export function useChatScreenState(requestedFriendId: string | null = null) {
     const [friends, setFriends] = useState<FriendItem[]>([]);
+    const [isLoadingFriends, setIsLoadingFriends] = useState(true);
     const [friendSearch, setFriendSearch] = useState("");
     const [selectedFriendId, setSelectedFriendId] = useState("");
-    const [messages, setMessages] = useState<ChatMessage[]>([]);
+    const [messageState, setMessageState] = useState<{ friendId: string | null; items: ChatMessage[] }>({
+        friendId: null,
+        items: [],
+    });
     const [draftMessage, setDraftMessage] = useState("");
     const [feedbackMessage, setFeedbackMessage] = useState<string | null>(null);
     const [mySharedLocation, setMySharedLocation] = useState<SharedLocationState | null>(null);
 
-    const activeFriendId = friends.some((friend) => friend.id === requestedFriendId)
-        ? requestedFriendId ?? selectedFriendId
-        : selectedFriendId;
+    const effectiveSelectedFriendId = requestedFriendId && friends.some((friend) => friend.id === requestedFriendId)
+        ? requestedFriendId
+        : friends.some((friend) => friend.id === selectedFriendId)
+            ? selectedFriendId
+            : friends[0]?.id ?? "";
+
+    const activeFriendId = effectiveSelectedFriendId;
 
     useEffect(() => {
         let isMounted = true;
@@ -184,6 +136,10 @@ export function useChatScreenState(requestedFriendId: string | null = null) {
 
                 setFeedbackMessage("네트워크 오류로 친구 목록을 불러오지 못했습니다.");
                 timeoutId = setTimeout(loadFriends, DEFAULT_FRIENDS_POLLING_INTERVAL_MS);
+            } finally {
+                if (isMounted) {
+                    setIsLoadingFriends(false);
+                }
             }
         }
 
@@ -252,34 +208,11 @@ export function useChatScreenState(requestedFriendId: string | null = null) {
     }, []);
 
     useEffect(() => {
-        if (!friends.length) {
-            if (selectedFriendId) {
-                setSelectedFriendId("");
-            }
-            return;
-        }
-
-        if (requestedFriendId && friends.some((friend) => friend.id === requestedFriendId)) {
-            if (selectedFriendId !== requestedFriendId) {
-                setSelectedFriendId(requestedFriendId);
-            }
-            return;
-        }
-
-        if (!friends.some((friend) => friend.id === selectedFriendId)) {
-            setSelectedFriendId(friends[0]?.id ?? "");
-        }
-    }, [friends, requestedFriendId, selectedFriendId]);
-
-    useEffect(() => {
         let isMounted = true;
         let timeoutId: ReturnType<typeof setTimeout> | null = null;
 
         async function loadMessages() {
             if (!activeFriendId) {
-                if (isMounted) {
-                    setMessages([]);
-                }
                 return;
             }
 
@@ -305,7 +238,10 @@ export function useChatScreenState(requestedFriendId: string | null = null) {
                     return;
                 }
 
-                setMessages(payload.data.messages.map((message) => mapMessageItemToChatMessage(message, activeFriendId)));
+                setMessageState({
+                    friendId: activeFriendId,
+                    items: payload.data.messages.map((message) => mapMessageItemToChatMessage(message, activeFriendId)),
+                });
                 timeoutId = setTimeout(
                     loadMessages,
                     Math.max(payload.data.pollingIntervalSec * 1000, DEFAULT_MESSAGE_POLLING_INTERVAL_MS),
@@ -321,10 +257,7 @@ export function useChatScreenState(requestedFriendId: string | null = null) {
         }
 
         if (activeFriendId) {
-            setMessages([]);
             void loadMessages();
-        } else {
-            setMessages([]);
         }
 
         return () => {
@@ -351,7 +284,10 @@ export function useChatScreenState(requestedFriendId: string | null = null) {
         [activeFriendId, friends],
     );
 
-    const selectedMessages = useMemo(() => messages, [messages]);
+    const selectedMessages = useMemo(
+        () => (messageState.friendId === activeFriendId ? messageState.items : []),
+        [activeFriendId, messageState.friendId, messageState.items],
+    );
 
     const lastSharedAt = mySharedLocation?.sharedAt ?? null;
     const {
@@ -441,10 +377,12 @@ export function useChatScreenState(requestedFriendId: string | null = null) {
                 return;
             }
 
-            setMessages((currentMessages) => [
-                ...currentMessages,
-                mapMessageItemToChatMessage(payload.data.message, activeFriendId),
-            ]);
+            setMessageState((currentMessageState) => ({
+                friendId: activeFriendId,
+                items: currentMessageState.friendId === activeFriendId
+                    ? [...currentMessageState.items, mapMessageItemToChatMessage(payload.data.message, activeFriendId)]
+                    : [mapMessageItemToChatMessage(payload.data.message, activeFriendId)],
+            }));
             setDraftMessage("");
             setFeedbackMessage("메세지를 전송했어요.");
         } catch {
@@ -527,6 +465,7 @@ export function useChatScreenState(requestedFriendId: string | null = null) {
     }
 
     return {
+        isLoadingFriends,
         friendSearch,
         setFriendSearch,
         activeFriendId,

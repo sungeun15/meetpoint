@@ -13,6 +13,7 @@ const LOCATION_KIND_VALUES = ["recent", "preset"] as const;
 const RECOMMENDATION_MODE_VALUES = ["now", "later"] as const;
 const RECOMMENDATION_CATEGORY_VALUES = ["cafe", "meal", "fun"] as const;
 const DEPARTURE_SOURCE_VALUES = ["search", "pin", "saved"] as const;
+const FRIEND_REQUEST_ACTION_VALUES = ["accept", "reject"] as const;
 
 // 닉네임 비교용 정규화는 trim, 연속 공백 축소, 영문 소문자 변환 규칙을 따른다.
 export function normalizeNickname(value: string) {
@@ -240,4 +241,16 @@ export function validateDeparturePoint(value: unknown, fieldName: string) {
         lng,
         source: departure.source as (typeof DEPARTURE_SOURCE_VALUES)[number],
     };
+}
+
+// 친구 요청 응답 액션은 accept/reject 두 값만 허용한다.
+export function validateFriendRequestAction(value: unknown) {
+    if (
+        typeof value !== "string"
+        || !FRIEND_REQUEST_ACTION_VALUES.includes(value as (typeof FRIEND_REQUEST_ACTION_VALUES)[number])
+    ) {
+        throw new InputValidationError("action은 accept 또는 reject 이어야 합니다.");
+    }
+
+    return value as (typeof FRIEND_REQUEST_ACTION_VALUES)[number];
 }

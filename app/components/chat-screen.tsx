@@ -30,6 +30,7 @@ export function ChatScreen({ requestedFriendId = null }: ChatScreenProps) {
     const [pendingLocationSave, setPendingLocationSave] = useState<PendingLocationSave | null>(null);
     const [isMobileSidebarCollapsed, setIsMobileSidebarCollapsed] = useState(true);
     const {
+        isLoadingFriends,
         friendSearch,
         setFriendSearch,
         activeFriendId,
@@ -178,6 +179,7 @@ export function ChatScreen({ requestedFriendId = null }: ChatScreenProps) {
                 <div className="grid min-w-0 gap-2.5 sm:gap-4 lg:grid-cols-[280px_minmax(0,1fr)] lg:items-start xl:grid-cols-[320px_minmax(0,1fr)] xl:gap-5">
                     <div ref={sidebarPanelRef} className="min-w-0 xl:h-(--friends-panel-height) xl:min-h-0">
                         <FriendsSidebar
+                            isLoadingFriends={isLoadingFriends}
                             friendSearch={friendSearch}
                             onFriendSearchChange={setFriendSearch}
                             filteredFriends={filteredFriends}
