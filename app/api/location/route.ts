@@ -1,9 +1,26 @@
 import { apiError, apiOk } from "@/lib/contracts/api";
-import { updateUserLocation } from "@/lib/repositories/users";
+import { findUserById, updateUserLocation } from "@/lib/repositories/users";
 import { createProtectedRoute } from "@/lib/utils/route-scaffold";
 import { InputValidationError, validateCoordinates } from "@/lib/utils/validation";
 
 export const dynamic = "force-dynamic";
+
+// 현재 사용자의 마지막 공유 위치를 조회해 새로고침 후 UI 복원에 사용한다.
+export const GET = createProtectedRoute(async (_request, { currentUserId }) => {
+    try {
+        const user = await findUserById(currentUserId);
+
+        return apiOk({
+            location: user && user.lat !== null && user.lng !== null ? {
+                lat: user.lat,
+                lng: user.lng,
+                locationUpdatedAt: user.locationUpdatedAt,
+            } : null,
+        });
+    } catch {
+        return apiError("INTERNAL_ERROR", "위치 조회 중 오류가 발생했습니다.", 500);
+    }
+});
 
 // 현재 위치 저장은 인증된 사용자 자신의 마지막 공유 위치만 갱신한다.
 export const POST = createProtectedRoute(async (request, { currentUserId }) => {

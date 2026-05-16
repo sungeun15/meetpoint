@@ -91,6 +91,34 @@ export async function createDepartureLocation(input: {
     return mapDepartureLocationRow(data);
 }
 
+// 저장 위치 수정은 현재 사용자 소유 row 의 좌표와 최근 주소 라벨을 함께 갱신한다.
+export async function updateDepartureLocation(input: {
+    userId: string;
+    departureLocationId: string;
+    label: string;
+    lat: number;
+    lng: number;
+}) {
+    const { data, error } = await getSupabaseAdminClient()
+        .from("departure_locations")
+        .update({
+            label: input.label,
+            lat: input.lat,
+            lng: input.lng,
+            updated_at: new Date().toISOString(),
+        })
+        .eq("user_id", input.userId)
+        .eq("id", input.departureLocationId)
+        .select("id, label, lat, lng, location_kind, last_used_at, created_at, updated_at")
+        .maybeSingle<DepartureLocationRow>();
+
+    if (error) {
+        throw error;
+    }
+
+    return data ? mapDepartureLocationRow(data) : null;
+}
+
 // 최근 사용 갱신은 현재 사용자 소유 row 만 갱신하고 없으면 null 을 반환한다.
 export async function touchDepartureLocationLastUsedAt(input: {
     userId: string;
@@ -112,4 +140,24 @@ export async function touchDepartureLocationLastUsedAt(input: {
     }
 
     return data ? mapDepartureLocationRow(data) : null;
+}
+
+// 저장 위치 삭제는 현재 사용자 소유 row 만 대상으로 하며 삭제된 id 목록을 반환한다.
+export async function deleteDepartureLocations(input: {
+    userId: string;
+    departureLocationIds: string[];
+}) {
+    const { data, error } = await getSupabaseAdminClient()
+        .from("departure_locations")
+        .delete()
+        .eq("user_id", input.userId)
+        .in("id", input.departureLocationIds)
+        .select("id")
+        .returns<Array<{ id: string }>>();
+
+    if (error) {
+        throw error;
+    }
+
+    return (data ?? []).map((row) => row.id);
 }
