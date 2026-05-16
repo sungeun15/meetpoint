@@ -11,8 +11,31 @@ import {
 export const dynamic = "force-dynamic";
 
 // 친구 목록은 현재 로그인 사용자의 관계만 조회해 friend 요약 배열로 반환한다.
-export const GET = createProtectedRoute(async (_request, { currentUserId }) => {
+export const GET = createProtectedRoute(async (request, { currentUserId, currentUserNickname }) => {
     try {
+        const requestUrl = new URL(request.url);
+        const rawNickname = requestUrl.searchParams.get("nickname");
+
+        if (rawNickname) {
+            const { nicknameNormalized } = validateNickname(rawNickname);
+
+            if (nicknameNormalized === normalizeNickname(currentUserNickname)) {
+                throw new InputValidationError("자기 자신은 친구로 검색할 수 없습니다.");
+            }
+
+            const friendUser = await findUserByNicknameNormalized(nicknameNormalized);
+
+            return apiOk({
+                friend: friendUser ? {
+                    id: friendUser.id,
+                    nickname: friendUser.nickname,
+                    lat: friendUser.lat,
+                    lng: friendUser.lng,
+                    locationUpdatedAt: friendUser.locationUpdatedAt,
+                } : null,
+            });
+        }
+
         const friends = await listFriendsForUser(currentUserId);
 
         return apiOk({
@@ -25,7 +48,11 @@ export const GET = createProtectedRoute(async (_request, { currentUserId }) => {
                 locationUpdatedAt: item.friend.locationUpdatedAt,
             })),
         });
-    } catch {
+    } catch (error) {
+        if (error instanceof InputValidationError) {
+            return apiError("INVALID_INPUT", error.message, 400);
+        }
+
         return apiError("INTERNAL_ERROR", "친구 목록 조회 중 오류가 발생했습니다.", 500);
     }
 });

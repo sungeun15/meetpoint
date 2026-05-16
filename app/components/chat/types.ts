@@ -19,7 +19,10 @@ export type SavedDeparture = {
     label: string;
     address: string;
     description: string;
+    lastUsedAt?: string;
     locationKind: "recent" | "preset";
+    latitude: number;
+    longitude: number;
 };
 
 export type LocationPoint = {

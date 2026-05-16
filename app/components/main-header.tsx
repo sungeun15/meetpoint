@@ -1,17 +1,13 @@
 "use client";
 
 import Link from "next/link";
-import { Inter } from "next/font/google";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 
 import { BrandLogo } from "@/app/components/brand-logo";
 import { GradientActionLink } from "@/app/components/gradient-action-link";
 
-const inter = Inter({
-  weight: ["500", "600"],
-  subsets: ["latin"],
-});
+const headerFontClassName = "font-pretendard font-medium";
 
 const navigationItems = [
   { href: "/", label: "Home" },
@@ -28,22 +24,7 @@ type HeaderConfig = {
   hidden?: boolean;
   actionLabel?: string;
   actionHref?: string;
-};
-
-const defaultHeaderConfig: HeaderConfig = {
-  actionLabel: "sign in",
-  actionHref: "/login",
-};
-
-const headerConfigByPath: Record<string, HeaderConfig> = {
-  "/login": {
-    actionLabel: "sign up",
-    actionHref: "/signup",
-  },
-  "/signup": {
-    actionLabel: "sign in",
-    actionHref: "/login",
-  },
+  actionKind?: "link" | "logout";
 };
 
 function getDesktopNavigationLinkClass(isActive: boolean, fontClassName: string) {
@@ -54,19 +35,56 @@ function getMobileNavigationLinkClass(isActive: boolean, fontClassName: string) 
   return `${fontClassName} relative rounded-2xl px-4 py-3 text-[16px] font-medium leading-[1.2] transition-[color,background-color,box-shadow] duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] ${isActive ? "bg-[#efeaff] font-semibold text-[#1d114f] shadow-[0px_12px_28px_rgba(104,92,231,0.12)] ring-1 ring-[rgba(108,92,231,0.18)] before:absolute before:bottom-3 before:left-4 before:top-3 before:w-[4px] before:rounded-full before:bg-[linear-gradient(180deg,#6675f7_0%,#57007b_100%)] before:content-[''] pl-7" : "text-[#4a5568] hover:bg-[#f8f5ff] hover:text-[#35258a] hover:shadow-[0px_10px_24px_rgba(104,92,231,0.08)]"}`;
 }
 
-export function MainHeader() {
+type MainHeaderProps = {
+  isAuthenticated: boolean;
+  userNickname: string | null;
+};
+
+export function MainHeader({ isAuthenticated, userNickname }: MainHeaderProps) {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isDrawerMounted, setIsDrawerMounted] = useState(false);
   const [isDrawerVisible, setIsDrawerVisible] = useState(false);
+  const [isLoggingOut, setIsLoggingOut] = useState(false);
   const pathname = usePathname();
+  const router = useRouter();
   const mobileMenuId = "main-header-mobile-menu";
   const closeTimeoutRef = useRef<number | null>(null);
-  const visibleNavigationItems = pathname?.startsWith("/friends") || pathname?.startsWith("/chat")
+  const isInAppPath = pathname?.startsWith("/friends") || pathname?.startsWith("/chat");
+  const visibleNavigationItems = isAuthenticated || isInAppPath
     ? [...navigationItems, ...inAppNavigationItems]
     : navigationItems;
-  const headerConfig = pathname
-    ? { ...defaultHeaderConfig, ...headerConfigByPath[pathname] }
-    : defaultHeaderConfig;
+  const defaultHeaderConfig: HeaderConfig = isAuthenticated
+    ? {
+      actionLabel: "open friends",
+      actionHref: "/friends",
+      actionKind: "link",
+    }
+    : {
+      actionLabel: "sign in",
+      actionHref: "/login",
+      actionKind: "link",
+    };
+  const headerConfigByPath: Record<string, HeaderConfig> = {
+    "/login": {
+      actionLabel: "sign up",
+      actionHref: "/signup",
+      actionKind: "link",
+    },
+    "/signup": {
+      actionLabel: "sign in",
+      actionHref: "/login",
+      actionKind: "link",
+    },
+  };
+  const headerConfig = isAuthenticated && isInAppPath
+    ? {
+      actionLabel: "sign out",
+      actionHref: "/login",
+      actionKind: "logout" as const,
+    }
+    : pathname
+      ? { ...defaultHeaderConfig, ...headerConfigByPath[pathname] }
+      : defaultHeaderConfig;
 
   useEffect(() => {
     return () => {
@@ -109,11 +127,39 @@ export function MainHeader() {
     openMobileMenu();
   }
 
+  async function handleLogout() {
+    if (isLoggingOut) {
+      return;
+    }
+
+    setIsLoggingOut(true);
+
+    try {
+      const response = await fetch("/api/auth/logout", {
+        method: "POST",
+      });
+
+      if (!response.ok) {
+        throw new Error("Logout failed");
+      }
+
+      closeMobileMenu();
+      router.push("/login");
+      router.refresh();
+    } catch {
+      setIsLoggingOut(false);
+    }
+  }
+
   if (headerConfig.hidden) {
     return null;
   }
 
   const actionHref = headerConfig.actionHref ?? defaultHeaderConfig.actionHref ?? "/login";
+  const actionKind = headerConfig.actionKind ?? "link";
+  const actionLabel = actionKind === "logout" && isLoggingOut
+    ? "signing out..."
+    : headerConfig.actionLabel;
 
   return (
     <header className="w-full border-b border-black/5 bg-white shadow-[0px_4px_20px_rgba(0,0,0,0.08)]">
@@ -125,27 +171,43 @@ export function MainHeader() {
             <Link
               key={navigationItem.href}
               href={navigationItem.href}
-              className={getDesktopNavigationLinkClass(pathname === navigationItem.href, inter.className)}
+              className={getDesktopNavigationLinkClass(pathname === navigationItem.href, headerFontClassName)}
             >
               {navigationItem.label}
             </Link>
           ))}
         </nav>
 
-        <div className="ml-auto hidden md:flex md:items-center">
-          <GradientActionLink
-            href={actionHref}
-            className={`${inter.className} inline-flex h-[48px] items-center justify-center rounded-[5px] px-[30px] text-[14px] font-medium leading-[14px] text-[#fafafa] shadow-[0px_4px_24.5px_rgba(0,0,0,0.15)] transition-opacity hover:opacity-95`}
-          >
-            {headerConfig.actionLabel}
-          </GradientActionLink>
+        <div className="ml-auto hidden md:flex md:items-center md:gap-3">
+          {actionKind === "logout" && userNickname ? (
+            <div className={`${headerFontClassName} inline-flex h-[44px] items-center rounded-full border border-[#ddd7ff] bg-[#f8f5ff] px-4 text-[14px] font-semibold text-[#35258a] shadow-[0px_8px_20px_rgba(108,92,231,0.12)]`}>
+              {userNickname}
+            </div>
+          ) : null}
+
+          {actionKind === "logout" ? (
+            <button
+              type="button"
+              disabled={isLoggingOut}
+              className={`${headerFontClassName} inline-flex h-[48px] cursor-pointer items-center justify-center rounded-[5px] bg-[linear-gradient(198.712deg,rgb(102,117,247)_0%,rgb(87,0,123)_100%)] px-[30px] text-[14px] font-medium leading-[14px] text-[#fafafa] shadow-[0px_4px_24.5px_rgba(0,0,0,0.15)] transition-opacity hover:opacity-95 disabled:cursor-not-allowed disabled:opacity-70`}
+              onClick={handleLogout}
+            >
+              {actionLabel}
+            </button>
+          ) : (
+            <GradientActionLink
+              href={actionHref}
+              className={`${headerFontClassName} inline-flex h-[48px] items-center justify-center rounded-[5px] px-[30px] text-[14px] font-medium leading-[14px] text-[#fafafa] shadow-[0px_4px_24.5px_rgba(0,0,0,0.15)] transition-opacity hover:opacity-95`}
+            >
+              {actionLabel}
+            </GradientActionLink>
+          )}
         </div>
 
         <button
           type="button"
           aria-label={isMenuOpen ? "Close navigation menu" : "Open navigation menu"}
           aria-controls={mobileMenuId}
-          aria-expanded={isMenuOpen ? "true" : "false"}
           className="ml-auto inline-flex size-11 cursor-pointer items-center justify-center rounded-full border border-[#d7dce5] bg-white text-[#24145f] shadow-[0px_6px_20px_rgba(36,20,95,0.12)] transition-colors hover:bg-[#f8f5ff] md:hidden"
           onClick={toggleMobileMenu}
         >
@@ -203,7 +265,7 @@ export function MainHeader() {
                 <Link
                   key={navigationItem.href}
                   href={navigationItem.href}
-                  className={getMobileNavigationLinkClass(pathname === navigationItem.href, inter.className)}
+                  className={getMobileNavigationLinkClass(pathname === navigationItem.href, headerFontClassName)}
                   onClick={closeMobileMenu}
                 >
                   {navigationItem.label}
@@ -212,13 +274,30 @@ export function MainHeader() {
             </nav>
 
             <div className="mt-auto pt-6">
-              <GradientActionLink
-                href={actionHref}
-                onClick={closeMobileMenu}
-                className={`${inter.className} inline-flex h-[48px] w-full items-center justify-center rounded-[8px] px-[30px] text-[14px] font-medium leading-[14px] text-[#fafafa] shadow-[0px_4px_24.5px_rgba(0,0,0,0.15)] transition-opacity hover:opacity-95`}
-              >
-                {headerConfig.actionLabel}
-              </GradientActionLink>
+              {actionKind === "logout" && userNickname ? (
+                <div className={`${headerFontClassName} mb-3 inline-flex w-full items-center justify-center rounded-full border border-[#ddd7ff] bg-[#f8f5ff] px-4 py-3 text-[14px] font-semibold text-[#35258a] shadow-[0px_8px_20px_rgba(108,92,231,0.12)]`}>
+                  {userNickname}
+                </div>
+              ) : null}
+
+              {actionKind === "logout" ? (
+                <button
+                  type="button"
+                  disabled={isLoggingOut}
+                  className={`${headerFontClassName} inline-flex h-[48px] w-full cursor-pointer items-center justify-center rounded-[8px] bg-[linear-gradient(198.712deg,rgb(102,117,247)_0%,rgb(87,0,123)_100%)] px-[30px] text-[14px] font-medium leading-[14px] text-[#fafafa] shadow-[0px_4px_24.5px_rgba(0,0,0,0.15)] transition-opacity hover:opacity-95 disabled:cursor-not-allowed disabled:opacity-70`}
+                  onClick={handleLogout}
+                >
+                  {actionLabel}
+                </button>
+              ) : (
+                <GradientActionLink
+                  href={actionHref}
+                  onClick={closeMobileMenu}
+                  className={`${headerFontClassName} inline-flex h-[48px] w-full items-center justify-center rounded-[8px] px-[30px] text-[14px] font-medium leading-[14px] text-[#fafafa] shadow-[0px_4px_24.5px_rgba(0,0,0,0.15)] transition-opacity hover:opacity-95`}
+                >
+                  {actionLabel}
+                </GradientActionLink>
+              )}
             </div>
           </div>
         </div>

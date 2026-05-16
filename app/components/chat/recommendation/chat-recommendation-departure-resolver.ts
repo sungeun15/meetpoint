@@ -16,6 +16,7 @@ type ResolveDepartureLocationArgs = {
     departureInputMethod: DepartureInputMethod; // 검색/핀/저장 위치 중 어떤 입력 방식을 쓰는지 나타냅니다.
     selectedSavedDepartures: SelectedSavedDepartures; // 저장 위치 입력 방식에서 사용할 선택 결과입니다.
     pinnedDepartureLabels: DepartureLabels; // 핀으로 지정한 출발 위치 라벨입니다.
+    pinnedDepartureLocations?: Record<DepartureParty, ResolvedLocation | null>; // 핀 선택 시 이미 확보한 좌표를 재사용합니다.
     departureSearchQueries: DepartureLabels; // 검색창에 입력한 원본 주소 문자열입니다.
     friendName: string; // 오류 문구에서 친구를 자연스럽게 지칭할 때 사용합니다.
 };
@@ -55,6 +56,7 @@ export async function resolveDepartureLocation({
     departureInputMethod,
     selectedSavedDepartures,
     pinnedDepartureLabels,
+    pinnedDepartureLocations,
     departureSearchQueries,
     friendName,
 }: ResolveDepartureLocationArgs): Promise<ResolvedLocation> {
@@ -65,10 +67,21 @@ export async function resolveDepartureLocation({
             throw new Error(buildDepartureSelectionErrorMessage(party, friendName, "saved"));
         }
 
-        return resolveAddressLocation(selectedSavedDeparture.address);
+        return {
+            label: selectedSavedDeparture.label,
+            address: selectedSavedDeparture.address,
+            latitude: selectedSavedDeparture.latitude,
+            longitude: selectedSavedDeparture.longitude,
+        };
     }
 
     if (departureInputMethod === "pin") {
+        const pinnedLocation = pinnedDepartureLocations?.[party];
+
+        if (pinnedLocation) {
+            return pinnedLocation;
+        }
+
         const pinnedAddress = pinnedDepartureLabels[party].trim();
 
         if (!pinnedAddress) {
@@ -121,7 +134,10 @@ export function buildSavedDeparture({
             label: normalizedTitle,
             address: normalizedPreviewValue,
             description: `${sourceLabel} · ${normalizedPreviewValue}`,
+            lastUsedAt: new Date().toISOString(),
             locationKind: "preset",
+            latitude: 0,
+            longitude: 0,
         },
         normalizedTitle,
     };
