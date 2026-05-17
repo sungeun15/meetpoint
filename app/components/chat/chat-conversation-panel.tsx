@@ -8,9 +8,13 @@ import type { ChatMessage } from "./types";
 type ChatConversationPanelProps = {
     selectedFriend: FriendItem;
     messages: ChatMessage[];
+    isLoadingMessages: boolean;
+    canLoadOlderMessages: boolean;
+    isLoadingOlderMessages: boolean;
     draftMessage: string;
     onDraftMessageChange: (nextValue: string) => void;
     onSendMessage: (event: FormEvent<HTMLFormElement>) => void;
+    onLoadOlderMessages: () => Promise<boolean>;
     feedbackMessage: string | null;
 };
 
@@ -18,6 +22,84 @@ type ChatMessageItemProps = {
     message: ChatMessage;
     friendName: string;
 };
+
+type ConversationRow =
+    | {
+        type: "date-divider";
+        key: string;
+        label: string;
+    }
+    | {
+        type: "message";
+        key: string;
+        message: ChatMessage;
+    };
+
+const MOBILE_OLDER_MESSAGES_AUTOLOAD_THRESHOLD_PX = 72;
+const DESKTOP_OLDER_MESSAGES_AUTOLOAD_THRESHOLD_PX = 120;
+
+function getOlderMessagesAutoloadThresholdPx() {
+    if (typeof window === "undefined") {
+        return DESKTOP_OLDER_MESSAGES_AUTOLOAD_THRESHOLD_PX;
+    }
+
+    return window.innerWidth < 640
+        ? MOBILE_OLDER_MESSAGES_AUTOLOAD_THRESHOLD_PX
+        : DESKTOP_OLDER_MESSAGES_AUTOLOAD_THRESHOLD_PX;
+}
+
+function formatConversationDateLabel(createdAt: string) {
+    const date = new Date(createdAt);
+
+    if (Number.isNaN(date.getTime())) {
+        return "날짜 확인 필요";
+    }
+
+    const today = new Date();
+    const todayStart = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+    const targetStart = new Date(date.getFullYear(), date.getMonth(), date.getDate());
+    const differenceInDays = Math.round((todayStart.getTime() - targetStart.getTime()) / 86400000);
+
+    if (differenceInDays === 0) {
+        return "오늘";
+    }
+
+    if (differenceInDays === 1) {
+        return "어제";
+    }
+
+    return new Intl.DateTimeFormat("ko-KR", {
+        year: "numeric",
+        month: "long",
+        day: "numeric",
+    }).format(date);
+}
+
+function buildConversationRows(messages: ChatMessage[]) {
+    const rows: ConversationRow[] = [];
+    let previousDateKey: string | null = null;
+
+    for (const message of messages) {
+        const dateKey = message.createdAt.slice(0, 10);
+
+        if (dateKey !== previousDateKey) {
+            rows.push({
+                type: "date-divider",
+                key: `date-divider-${dateKey}`,
+                label: formatConversationDateLabel(message.createdAt),
+            });
+            previousDateKey = dateKey;
+        }
+
+        rows.push({
+            type: "message",
+            key: message.id,
+            message,
+        });
+    }
+
+    return rows;
+}
 
 function ChatMessageItem({ message, friendName }: ChatMessageItemProps) {
     const isMine = message.sender === "me";
@@ -52,15 +134,52 @@ function ChatMessageItem({ message, friendName }: ChatMessageItemProps) {
 export function ChatConversationPanel({
     selectedFriend,
     messages,
+    isLoadingMessages,
+    canLoadOlderMessages,
+    isLoadingOlderMessages,
     draftMessage,
     onDraftMessageChange,
     onSendMessage,
+    onLoadOlderMessages,
     feedbackMessage,
 }: ChatConversationPanelProps) {
     const [isMobileConversationCollapsed, setIsMobileConversationCollapsed] = useState(true);
     const latestMessage = messages[messages.length - 1] ?? null;
     const conversationViewportRef = useRef<HTMLDivElement | null>(null);
+    const previousScrollHeightRef = useRef(0);
+    const shouldRestoreScrollPositionRef = useRef(false);
     const latestMessageKey = latestMessage?.id ?? "";
+    const conversationRows = buildConversationRows(messages);
+
+    async function handleLoadOlderClick() {
+        if (isLoadingOlderMessages) {
+            return;
+        }
+
+        const viewportElement = conversationViewportRef.current;
+
+        if (viewportElement) {
+            previousScrollHeightRef.current = viewportElement.scrollHeight;
+            shouldRestoreScrollPositionRef.current = true;
+        }
+
+        const didLoadOlderMessages = await onLoadOlderMessages();
+
+        if (!didLoadOlderMessages) {
+            shouldRestoreScrollPositionRef.current = false;
+            previousScrollHeightRef.current = 0;
+        }
+    }
+
+    function handleConversationScroll(event: React.UIEvent<HTMLDivElement>) {
+        if (!canLoadOlderMessages || isLoadingOlderMessages || isLoadingMessages || shouldRestoreScrollPositionRef.current) {
+            return;
+        }
+
+        if (event.currentTarget.scrollTop <= getOlderMessagesAutoloadThresholdPx()) {
+            void handleLoadOlderClick();
+        }
+    }
 
     useEffect(() => {
         const viewportElement = conversationViewportRef.current;
@@ -78,12 +197,37 @@ export function ChatConversationPanel({
         };
     }, [isMobileConversationCollapsed, latestMessageKey, selectedFriend.id]);
 
+    useEffect(() => {
+        if (!shouldRestoreScrollPositionRef.current) {
+            return;
+        }
+
+        const viewportElement = conversationViewportRef.current;
+
+        if (!viewportElement) {
+            shouldRestoreScrollPositionRef.current = false;
+            previousScrollHeightRef.current = 0;
+            return;
+        }
+
+        const animationFrameId = window.requestAnimationFrame(() => {
+            const scrollDelta = viewportElement.scrollHeight - previousScrollHeightRef.current;
+            viewportElement.scrollTop += scrollDelta;
+            shouldRestoreScrollPositionRef.current = false;
+            previousScrollHeightRef.current = 0;
+        });
+
+        return () => {
+            window.cancelAnimationFrame(animationFrameId);
+        };
+    }, [messages.length]);
+
     return (
         <ChatSectionCard className="overflow-hidden">
             <div className="border-b border-[#ebe8fb] px-3.5 py-2.5 sm:px-6 sm:py-4 lg:px-8">
                 <div className="flex items-center justify-between gap-2">
                     <p className={`${friendsDisplayFont.className} text-center text-[14px] text-[#4b5563] sm:flex-1 sm:text-[17px]`}>
-                        ---오늘---
+                        대화 기록
                     </p>
                     <button
                         type="button"
@@ -98,7 +242,11 @@ export function ChatConversationPanel({
             <div className="flex flex-col gap-3.5 px-3.5 py-3.5 sm:px-6 sm:py-5 lg:px-8 lg:py-6">
                 {isMobileConversationCollapsed ? (
                     <div className="rounded-[18px] border border-dashed border-[#d8d2fb] bg-[#faf8ff] px-3 py-2.5 sm:hidden">
-                        {latestMessage ? (
+                        {isLoadingMessages ? (
+                            <p className={`${friendsDisplayFont.className} text-[12px] text-[#6b7280]`}>
+                                메시지를 불러오는 중이에요.
+                            </p>
+                        ) : latestMessage ? (
                             <div className="space-y-1">
                                 <p className={`${friendsBodyFont.className} text-[10px] text-[#7a7399]`}>
                                     최근 대화 미리보기
@@ -117,14 +265,44 @@ export function ChatConversationPanel({
 
                 <div
                     ref={conversationViewportRef}
+                    onScroll={handleConversationScroll}
                     className={`${isMobileConversationCollapsed ? "hidden sm:block" : "block"} h-[240px] overflow-y-auto pr-1 sm:h-[300px] sm:pr-2 lg:h-[340px] xl:h-[380px]`}
                 >
                     <div className="flex min-h-full flex-col gap-3 sm:gap-4">
-                        {messages.length > 0 ? (
-                            messages.map((message) => (
+                        {isLoadingOlderMessages ? (
+                            <div className="sticky top-0 z-10 flex justify-center">
+                                <div className="rounded-full border border-[#ddd8ff] bg-white/95 px-3 py-1.5 text-[11px] font-semibold text-[#5f47d2] shadow-[0px_8px_18px_rgba(108,92,231,0.08)] backdrop-blur sm:text-[12px]">
+                                    이전 메시지를 불러오는 중...
+                                </div>
+                            </div>
+                        ) : null}
+
+                        {isLoadingMessages ? (
+                            <div className="space-y-3 sm:space-y-4">
+                                {Array.from({ length: 4 }).map((_, index) => (
+                                    <div
+                                        key={`chat-message-skeleton-${index}`}
+                                        className={`flex ${index % 2 === 0 ? "justify-start" : "justify-end"}`}
+                                    >
+                                        <div className="max-w-[88%] rounded-[18px] bg-[#f3efff] px-4 py-3">
+                                            <div className="h-4 w-40 animate-pulse rounded-full bg-[#e1d8ff] sm:w-56" />
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        ) : messages.length > 0 ? (
+                            conversationRows.map((row) => row.type === "date-divider" ? (
+                                <div key={row.key} className="sticky top-0 z-5 -mx-1 flex justify-center py-1.5">
+                                    <div className="inline-flex items-center rounded-full border border-[#ddd8ff] bg-white/92 px-3 py-1 shadow-[0px_8px_18px_rgba(108,92,231,0.08)] backdrop-blur sm:px-3.5">
+                                        <p className={`${friendsBodyFont.className} shrink-0 text-[11px] font-semibold text-[#7a7399] sm:text-[12px]`}>
+                                            {row.label}
+                                        </p>
+                                    </div>
+                                </div>
+                            ) : (
                                 <ChatMessageItem
-                                    key={message.id}
-                                    message={message}
+                                    key={row.key}
+                                    message={row.message}
                                     friendName={selectedFriend.nickname}
                                 />
                             ))
