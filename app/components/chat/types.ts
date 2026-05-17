@@ -4,6 +4,7 @@ export type ChatMessage = {
     sender: "friend" | "me";
     text: string;
     time: string;
+    createdAt: string;
 };
 
 export type MeetingMode = "now" | "later";

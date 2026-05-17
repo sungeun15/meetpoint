@@ -7,6 +7,7 @@ import {
     validateLimit,
     validateMessageContent,
     validateOptionalIsoDatetime,
+    validateOptionalUuid,
     validateUuid,
 } from "@/lib/utils/validation";
 
@@ -20,7 +21,22 @@ export const GET = createProtectedRoute(async (request, { currentUserId }) => {
         const { searchParams } = new URL(request.url);
         const friendId = validateUuid(searchParams.get("friendId"), "friendId");
         const after = validateOptionalIsoDatetime(searchParams.get("after"), "after");
+        const afterId = validateOptionalUuid(searchParams.get("afterId"), "afterId");
+        const before = validateOptionalIsoDatetime(searchParams.get("before"), "before");
+        const beforeId = validateOptionalUuid(searchParams.get("beforeId"), "beforeId");
         const limit = validateLimit(searchParams.get("limit"));
+
+        if (after && before) {
+            throw new InputValidationError("after와 before는 동시에 사용할 수 없습니다.");
+        }
+
+        if ((after && !afterId) || (!after && afterId)) {
+            throw new InputValidationError("after와 afterId는 함께 전달해야 합니다.");
+        }
+
+        if ((before && !beforeId) || (!before && beforeId)) {
+            throw new InputValidationError("before와 beforeId는 함께 전달해야 합니다.");
+        }
 
         const hasRelation = await hasFriendRelation(currentUserId, friendId);
 
@@ -32,6 +48,9 @@ export const GET = createProtectedRoute(async (request, { currentUserId }) => {
             currentUserId,
             friendId,
             after,
+            afterId,
+            before,
+            beforeId,
             limit,
         });
         const lastMessageCreatedAt = messages.at(-1)?.createdAt ?? null;

@@ -79,6 +79,14 @@ export function validateUuid(value: unknown, fieldName: string) {
     return value;
 }
 
+export function validateOptionalUuid(value: string | null, fieldName: string) {
+    if (value === null || value === "") {
+        return null;
+    }
+
+    return validateUuid(value, fieldName);
+}
+
 // 메시지 본문은 공백만 있는 입력을 차단하고 DB 저장용 trim 값을 반환한다.
 export function validateMessageContent(value: string) {
     if (typeof value !== "string") {
