@@ -121,8 +121,8 @@ export function validateLimit(value: string | null, defaultValue = 50, maxValue 
     return parsed;
 }
 
-// after 쿼리는 ISO datetime 형식만 허용하고 없으면 null 로 통일한다.
-export function validateOptionalIsoDatetime(value: string | null, fieldName: string) {
+// after/before 같은 선택 커서는 형식이 잘못돼도 조회를 막지 않도록 null 로 정리한다.
+export function validateOptionalIsoDatetime(value: string | null) {
     if (value === null || value === "") {
         return null;
     }
@@ -130,7 +130,7 @@ export function validateOptionalIsoDatetime(value: string | null, fieldName: str
     const parsed = new Date(value);
 
     if (Number.isNaN(parsed.getTime()) || parsed.toISOString() !== value) {
-        throw new InputValidationError(`${fieldName}는 ISO datetime 형식이어야 합니다.`);
+        return null;
     }
 
     return value;

@@ -15,27 +15,37 @@ export const dynamic = "force-dynamic";
 
 const MESSAGE_POLLING_INTERVAL_SECONDS = 5;
 
+type MessageCursorParams = {
+    after: string | null;
+    afterId: string | null;
+    before: string | null;
+    beforeId: string | null;
+};
+
+function normalizeMessageCursorParams(searchParams: URLSearchParams): MessageCursorParams {
+    const parsedAfter = validateOptionalIsoDatetime(searchParams.get("after"));
+    const parsedAfterId = validateOptionalUuid(searchParams.get("afterId"), "afterId");
+    const parsedBefore = validateOptionalIsoDatetime(searchParams.get("before"));
+    const parsedBeforeId = validateOptionalUuid(searchParams.get("beforeId"), "beforeId");
+
+    return {
+        after: parsedAfter && parsedAfterId ? parsedAfter : null,
+        afterId: parsedAfter && parsedAfterId ? parsedAfterId : null,
+        before: parsedBefore && parsedBeforeId ? parsedBefore : null,
+        beforeId: parsedBefore && parsedBeforeId ? parsedBeforeId : null,
+    };
+}
+
 // 메시지 조회는 현재 사용자와 선택 친구 간 대화만 asc 정렬로 반환한다.
 export const GET = createProtectedRoute(async (request, { currentUserId }) => {
     try {
         const { searchParams } = new URL(request.url);
         const friendId = validateUuid(searchParams.get("friendId"), "friendId");
-        const after = validateOptionalIsoDatetime(searchParams.get("after"), "after");
-        const afterId = validateOptionalUuid(searchParams.get("afterId"), "afterId");
-        const before = validateOptionalIsoDatetime(searchParams.get("before"), "before");
-        const beforeId = validateOptionalUuid(searchParams.get("beforeId"), "beforeId");
         const limit = validateLimit(searchParams.get("limit"));
+        const { after, afterId, before, beforeId } = normalizeMessageCursorParams(searchParams);
 
         if (after && before) {
-            throw new InputValidationError("after와 before는 동시에 사용할 수 없습니다.");
-        }
-
-        if ((after && !afterId) || (!after && afterId)) {
-            throw new InputValidationError("after와 afterId는 함께 전달해야 합니다.");
-        }
-
-        if ((before && !beforeId) || (!before && beforeId)) {
-            throw new InputValidationError("before와 beforeId는 함께 전달해야 합니다.");
+            throw new InputValidationError("메시지 조회 조건이 올바르지 않습니다.");
         }
 
         const hasRelation = await hasFriendRelation(currentUserId, friendId);
