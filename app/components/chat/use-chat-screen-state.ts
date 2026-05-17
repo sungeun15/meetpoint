@@ -52,6 +52,11 @@ type LocationLookupResponse = {
     } | null;
 };
 
+type ApiRequestResult<T> =
+    | { status: "ok"; data: T }
+    | { status: "unauthorized" }
+    | { status: "error"; message: string };
+
 const DEFAULT_MESSAGE_POLLING_INTERVAL_MS = 5000;
 const DEFAULT_FRIENDS_POLLING_INTERVAL_MS = 5000;
 const MESSAGE_PAGE_SIZE = 100;
@@ -104,14 +109,14 @@ function buildMessagesRequestUrl(input: {
         limit: String(input.limit),
     });
 
-    if (input.after) {
+    if (input.after && input.afterId) {
         searchParams.set("after", input.after);
-        searchParams.set("afterId", input.afterId ?? "");
+        searchParams.set("afterId", input.afterId);
     }
 
-    if (input.before) {
+    if (input.before && input.beforeId) {
         searchParams.set("before", input.before);
-        searchParams.set("beforeId", input.beforeId ?? "");
+        searchParams.set("beforeId", input.beforeId);
     }
 
     return `/api/messages?${searchParams.toString()}`;
@@ -137,6 +142,27 @@ function mergeChatMessages(currentMessages: ChatMessage[], nextMessages: ChatMes
 
         return left.id.localeCompare(right.id);
     });
+}
+
+async function requestApi<T>(input: RequestInfo | URL, fallbackMessage: string, init?: RequestInit): Promise<ApiRequestResult<T>> {
+    const response = await fetch(input, init);
+    const payload = (await response.json()) as ApiResponse<T>;
+
+    if (response.status === 401) {
+        return { status: "unauthorized" };
+    }
+
+    if (!response.ok || !payload.ok) {
+        return {
+            status: "error",
+            message: payload.ok ? fallbackMessage : payload.error.message,
+        };
+    }
+
+    return {
+        status: "ok",
+        data: payload.data,
+    };
 }
 
 function createEmptyMessageFeedState(friendId: string | null): MessageFeedState {
@@ -193,28 +219,27 @@ export function useChatScreenState(requestedFriendId: string | null = null) {
 
         async function loadFriends() {
             try {
-                const response = await fetch("/api/friends", {
+                const result = await requestApi<FriendsListResponse>("/api/friends", "친구 목록을 불러오지 못했습니다.", {
                     method: "GET",
                     cache: "no-store",
                 });
-                const payload = (await response.json()) as ApiResponse<FriendsListResponse>;
 
                 if (!isMounted) {
                     return;
                 }
 
-                if (response.status === 401) {
+                if (result.status === "unauthorized") {
                     window.location.href = "/login";
                     return;
                 }
 
-                if (!response.ok || !payload.ok) {
-                    setFeedbackMessage(payload.ok ? "친구 목록을 불러오지 못했습니다." : payload.error.message);
+                if (result.status === "error") {
+                    setFeedbackMessage(result.message);
                     timeoutId = setTimeout(loadFriends, DEFAULT_FRIENDS_POLLING_INTERVAL_MS);
                     return;
                 }
 
-                setFriends(payload.data.friends.map(mapFriendSummaryToItem));
+                setFriends(result.data.friends.map(mapFriendSummaryToItem));
                 timeoutId = setTimeout(loadFriends, DEFAULT_FRIENDS_POLLING_INTERVAL_MS);
             } catch {
                 if (!isMounted) {
@@ -246,26 +271,25 @@ export function useChatScreenState(requestedFriendId: string | null = null) {
 
         async function loadMyLocation() {
             try {
-                const response = await fetch("/api/location", {
+                const result = await requestApi<LocationLookupResponse>("/api/location", "위치 정보를 불러오지 못했습니다.", {
                     method: "GET",
                     cache: "no-store",
                 });
-                const payload = (await response.json()) as ApiResponse<LocationLookupResponse>;
 
                 if (!isMounted) {
                     return;
                 }
 
-                if (response.status === 401) {
+                if (result.status === "unauthorized") {
                     window.location.href = "/login";
                     return;
                 }
 
-                if (!response.ok || !payload.ok) {
+                if (result.status === "error") {
                     return;
                 }
 
-                if (!payload.data.location) {
+                if (!result.data.location) {
                     setMySharedLocation(null);
                     return;
                 }
@@ -273,12 +297,12 @@ export function useChatScreenState(requestedFriendId: string | null = null) {
                 setMySharedLocation({
                     label: "내 현재 위치",
                     address: `공유한 위치 · ${formatLocationPreview({
-                        latitude: payload.data.location.lat,
-                        longitude: payload.data.location.lng,
+                        latitude: result.data.location.lat,
+                        longitude: result.data.location.lng,
                     })}`,
-                    latitude: payload.data.location.lat,
-                    longitude: payload.data.location.lng,
-                    sharedAt: formatLocationUpdatedLabel(payload.data.location.locationUpdatedAt) ?? "최근",
+                    latitude: result.data.location.lat,
+                    longitude: result.data.location.lng,
+                    sharedAt: formatLocationUpdatedLabel(result.data.location.locationUpdatedAt) ?? "최근",
                 });
             } catch {
                 if (!isMounted) {
@@ -310,33 +334,32 @@ export function useChatScreenState(requestedFriendId: string | null = null) {
             setMessageState(createEmptyMessageFeedState(activeFriendId));
 
             try {
-                const response = await fetch(buildMessagesRequestUrl({
+                const result = await requestApi<MessagesListResponse>(buildMessagesRequestUrl({
                     friendId: activeFriendId,
                     limit: MESSAGE_PAGE_SIZE,
-                }), {
+                }), "메시지 목록을 불러오지 못했습니다.", {
                     method: "GET",
                     cache: "no-store",
                 });
-                const payload = (await response.json()) as ApiResponse<MessagesListResponse>;
 
                 if (!isMounted) {
                     return;
                 }
 
-                if (response.status === 401) {
+                if (result.status === "unauthorized") {
                     window.location.href = "/login";
                     return;
                 }
 
-                if (!response.ok || !payload.ok) {
+                if (result.status === "error") {
                     setMessageState(createEmptyMessageFeedState(activeFriendId));
-                    setFeedbackMessage(payload.ok ? "메시지 목록을 불러오지 못했습니다." : payload.error.message);
+                    setFeedbackMessage(result.message);
                     return;
                 }
 
-                const nextMessages = payload.data.messages.map((message) => mapMessageItemToChatMessage(message, activeFriendId));
+                const nextMessages = result.data.messages.map((message) => mapMessageItemToChatMessage(message, activeFriendId));
                 setMessageState(
-                    buildMessageFeedState(activeFriendId, nextMessages, payload.data.messages.length >= MESSAGE_PAGE_SIZE),
+                    buildMessageFeedState(activeFriendId, nextMessages, result.data.messages.length >= MESSAGE_PAGE_SIZE),
                 );
             } catch {
                 if (!isMounted) {
@@ -371,33 +394,32 @@ export function useChatScreenState(requestedFriendId: string | null = null) {
 
         async function pollMessages() {
             try {
-                const response = await fetch(buildMessagesRequestUrl({
+                const result = await requestApi<MessagesListResponse>(buildMessagesRequestUrl({
                     friendId: activeFriendId,
                     limit: messageState.newestCreatedAt ? MESSAGE_PAGE_SIZE : 1,
                     after: messageState.newestCreatedAt,
                     afterId: messageState.newestMessageId,
-                }), {
+                }), "메시지 목록을 불러오지 못했습니다.", {
                     method: "GET",
                     cache: "no-store",
                 });
-                const payload = (await response.json()) as ApiResponse<MessagesListResponse>;
 
                 if (!isMounted) {
                     return;
                 }
 
-                if (response.status === 401) {
+                if (result.status === "unauthorized") {
                     window.location.href = "/login";
                     return;
                 }
 
-                if (!response.ok || !payload.ok) {
-                    setFeedbackMessage(payload.ok ? "메시지 목록을 불러오지 못했습니다." : payload.error.message);
+                if (result.status === "error") {
+                    setFeedbackMessage(result.message);
                     return;
                 }
 
-                if (payload.data.messages.length > 0) {
-                    const incomingMessages = payload.data.messages.map((message) => mapMessageItemToChatMessage(message, activeFriendId));
+                if (result.data.messages.length > 0) {
+                    const incomingMessages = result.data.messages.map((message) => mapMessageItemToChatMessage(message, activeFriendId));
 
                     setMessageState((currentMessageState) => {
                         if (currentMessageState.friendId !== activeFriendId) {
@@ -518,7 +540,7 @@ export function useChatScreenState(requestedFriendId: string | null = null) {
         }
 
         try {
-            const response = await fetch("/api/messages", {
+            const result = await requestApi<MessageCreateResponse>("/api/messages", "메시지 전송 중 오류가 발생했습니다.", {
                 method: "POST",
                 headers: {
                     "Content-Type": "application/json",
@@ -528,19 +550,18 @@ export function useChatScreenState(requestedFriendId: string | null = null) {
                     content: normalizedMessage,
                 }),
             });
-            const payload = (await response.json()) as ApiResponse<MessageCreateResponse>;
 
-            if (response.status === 401) {
+            if (result.status === "unauthorized") {
                 window.location.href = "/login";
                 return;
             }
 
-            if (!response.ok || !payload.ok) {
-                setFeedbackMessage(payload.ok ? "메시지 전송 중 오류가 발생했습니다." : payload.error.message);
+            if (result.status === "error") {
+                setFeedbackMessage(result.message);
                 return;
             }
 
-            const nextMessage = mapMessageItemToChatMessage(payload.data.message, activeFriendId);
+            const nextMessage = mapMessageItemToChatMessage(result.data.message, activeFriendId);
 
             setMessageState((currentMessageState) => {
                 const currentItems = currentMessageState.friendId === activeFriendId ? currentMessageState.items : [];
@@ -562,35 +583,34 @@ export function useChatScreenState(requestedFriendId: string | null = null) {
         setIsLoadingOlderMessages(true);
 
         try {
-            const response = await fetch(buildMessagesRequestUrl({
+            const result = await requestApi<MessagesListResponse>(buildMessagesRequestUrl({
                 friendId: activeFriendId,
                 limit: MESSAGE_PAGE_SIZE,
                 before: messageState.oldestCreatedAt,
                 beforeId: messageState.oldestMessageId,
-            }), {
+            }), "이전 메시지를 불러오지 못했습니다.", {
                 method: "GET",
                 cache: "no-store",
             });
-            const payload = (await response.json()) as ApiResponse<MessagesListResponse>;
 
-            if (response.status === 401) {
+            if (result.status === "unauthorized") {
                 window.location.href = "/login";
                 return false;
             }
 
-            if (!response.ok || !payload.ok) {
-                setFeedbackMessage(payload.ok ? "이전 메시지를 불러오지 못했습니다." : payload.error.message);
+            if (result.status === "error") {
+                setFeedbackMessage(result.message);
                 return false;
             }
 
-            if (payload.data.messages.length === 0) {
+            if (result.data.messages.length === 0) {
                 setMessageState((currentMessageState) => currentMessageState.friendId === activeFriendId
                     ? { ...currentMessageState, hasOlderMessages: false }
                     : currentMessageState);
                 return false;
             }
 
-            const olderMessages = payload.data.messages.map((message) => mapMessageItemToChatMessage(message, activeFriendId));
+            const olderMessages = result.data.messages.map((message) => mapMessageItemToChatMessage(message, activeFriendId));
 
             setMessageState((currentMessageState) => {
                 if (currentMessageState.friendId !== activeFriendId) {
@@ -601,7 +621,7 @@ export function useChatScreenState(requestedFriendId: string | null = null) {
                 return buildMessageFeedState(
                     activeFriendId,
                     nextMessages,
-                    payload.data.messages.length >= MESSAGE_PAGE_SIZE,
+                    result.data.messages.length >= MESSAGE_PAGE_SIZE,
                 );
             });
 
@@ -635,7 +655,7 @@ export function useChatScreenState(requestedFriendId: string | null = null) {
         navigator.geolocation.getCurrentPosition(
             async (position) => {
                 try {
-                    const response = await fetch("/api/location", {
+                    const result = await requestApi<LocationSaveResponse>("/api/location", "위치 저장 중 오류가 발생했습니다.", {
                         method: "POST",
                         headers: {
                             "Content-Type": "application/json",
@@ -645,15 +665,14 @@ export function useChatScreenState(requestedFriendId: string | null = null) {
                             lng: position.coords.longitude,
                         }),
                     });
-                    const payload = (await response.json()) as ApiResponse<LocationSaveResponse>;
 
-                    if (response.status === 401) {
+                    if (result.status === "unauthorized") {
                         window.location.href = "/login";
                         return;
                     }
 
-                    if (!response.ok || !payload.ok) {
-                        setFeedbackMessage(payload.ok ? "위치 저장 중 오류가 발생했습니다." : payload.error.message);
+                    if (result.status === "error") {
+                        setFeedbackMessage(result.message);
                         return;
                     }
 
@@ -661,11 +680,11 @@ export function useChatScreenState(requestedFriendId: string | null = null) {
                         {
                             label: "내 현재 위치",
                             address: `브라우저 현재 위치 · ${formatLocationPreview({
-                                latitude: payload.data.location.lat,
-                                longitude: payload.data.location.lng,
+                                latitude: result.data.location.lat,
+                                longitude: result.data.location.lng,
                             })}`,
-                            latitude: payload.data.location.lat,
-                            longitude: payload.data.location.lng,
+                            latitude: result.data.location.lat,
+                            longitude: result.data.location.lng,
                         },
                         "현재 위치를",
                     );
