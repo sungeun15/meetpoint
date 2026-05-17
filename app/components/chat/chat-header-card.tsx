@@ -1,8 +1,8 @@
 import { useState } from "react";
 
-import { getFriendInitial } from "../friends/data";
 import { friendsBodyFont, friendsDisplayFont, friendsHeadingFont } from "../friends/fonts";
 import type { FriendItem } from "../friends/types";
+import { FriendInitialAvatar } from "../shared/friend-initial-avatar";
 import { ChatActionButton, ChatSectionCard } from "./chat-ui";
 
 type ChatHeaderCardProps = {
@@ -17,11 +17,10 @@ export function ChatHeaderCard({ selectedFriend, lastSharedAt }: ChatHeaderCardP
         <ChatSectionCard className="px-3 py-3 sm:px-5 sm:py-4 lg:px-8 lg:py-6">
             <div className="flex flex-col gap-2.5 xl:flex-row xl:items-center xl:justify-between">
                 <div className="flex items-start gap-2.5 sm:gap-4">
-                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[#d9d9d9] text-[16px] text-[#111827] sm:h-[52px] sm:w-[52px] sm:text-[21px] lg:h-[58px] lg:w-[58px] lg:text-[24px]">
-                        <span className={`${friendsDisplayFont.className} leading-none`}>
-                            {getFriendInitial(selectedFriend.nickname)}
-                        </span>
-                    </div>
+                    <FriendInitialAvatar
+                        nickname={selectedFriend.nickname}
+                        className="h-10 w-10 text-[16px] sm:h-[52px] sm:w-[52px] sm:text-[21px] lg:h-[58px] lg:w-[58px] lg:text-[24px]"
+                    />
 
                     <div className="min-w-0 space-y-1 sm:space-y-1.5">
                         <div className="flex items-center justify-between gap-2 sm:block">

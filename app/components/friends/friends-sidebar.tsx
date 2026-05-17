@@ -1,9 +1,9 @@
 import Link from "next/link";
 
 import { friendsBodyFont, friendsDisplayFont, friendsHeadingFont } from "./fonts";
-import { getFriendInitial } from "./data";
 import type { FriendItem } from "./types";
 import { FriendSearchField } from "./friend-search-field";
+import { FriendInitialAvatar } from "../shared/friend-initial-avatar";
 
 type FriendsSidebarProps = {
     isLoadingFriends: boolean;
@@ -116,11 +116,10 @@ export function FriendsSidebar({
                                 }`;
                             const itemContent = (
                                 <>
-                                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[#d9d9d9] text-[16px] text-[#111827] sm:h-12 sm:w-12 sm:text-[20px] lg:h-13 lg:w-13 lg:text-[22px]">
-                                        <span className={`${friendsDisplayFont.className} leading-none`}>
-                                            {getFriendInitial(friend.nickname)}
-                                        </span>
-                                    </div>
+                                    <FriendInitialAvatar
+                                        nickname={friend.nickname}
+                                        className="h-10 w-10 text-[16px] sm:h-12 sm:w-12 sm:text-[20px] lg:h-13 lg:w-13 lg:text-[22px]"
+                                    />
                                     <div className="min-w-0 flex-1">
                                         <p className={`${friendsDisplayFont.className} truncate text-[16px] leading-none text-black sm:text-[20px] lg:text-[22px]`}>
                                             {friend.nickname}
