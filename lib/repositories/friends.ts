@@ -28,6 +28,15 @@ type AcceptFriendRequestRpcRow = {
 export type FriendListItem = {
     relationId: string;
     friend: UserSummary;
+    unreadCount: number;
+    lastMessagePreview: string | null;
+};
+
+type LatestMessagePreviewRow = {
+    sender_id: string;
+    content: string;
+    created_at: string;
+    id: string;
 };
 
 export type PendingFriendRequestListItem = {
@@ -63,6 +72,86 @@ async function listUsersByIds(userIds: string[]) {
     }
 
     return new Map(data.map((row) => [row.id, mapFriendUserRow(row)]));
+}
+
+async function listUnreadMessageCountsByFriend(userId: string, friendIds: string[]) {
+    if (!friendIds.length) {
+        return new Map<string, number>();
+    }
+
+    const { data, error } = await getSupabaseAdminClient()
+        .from("messages")
+        .select("sender_id")
+        .eq("receiver_id", userId)
+        .is("read_at", null)
+        .in("sender_id", friendIds)
+        .returns<Array<{ sender_id: string }>>();
+
+    if (error) {
+        throw error;
+    }
+
+    const unreadCountByFriendId = new Map<string, number>();
+
+    for (const row of data) {
+        unreadCountByFriendId.set(row.sender_id, (unreadCountByFriendId.get(row.sender_id) ?? 0) + 1);
+    }
+
+    return unreadCountByFriendId;
+}
+
+function buildLastMessagePreview(content: string) {
+    const normalizedContent = content.replace(/\s+/g, " ").trim();
+
+    if (!normalizedContent) {
+        return null;
+    }
+
+    return normalizedContent.length > 48
+        ? `${normalizedContent.slice(0, 48)}...`
+        : normalizedContent;
+}
+
+async function listLastMessagePreviewsByFriend(userId: string, friendIds: string[]) {
+    if (!friendIds.length) {
+        return new Map<string, string | null>();
+    }
+
+    // 친구별 개별 조회 대신 수신 메시지를 한 번에 모아온다.
+    const { data, error } = await getSupabaseAdminClient()
+        .from("messages")
+        .select("id, sender_id, content, created_at")
+        .eq("receiver_id", userId)
+        .in("sender_id", friendIds)
+        .order("created_at", { ascending: false })
+        .order("id", { ascending: false })
+        .returns<LatestMessagePreviewRow[]>();
+
+    if (error) {
+        throw error;
+    }
+
+    const lastMessagePreviewByFriendId = new Map<string, string | null>();
+
+    for (const friendId of friendIds) {
+        lastMessagePreviewByFriendId.set(friendId, null);
+    }
+
+    for (const row of data) {
+        // 최신순 결과라 sender_id 별 첫 행이 마지막 미리보기다.
+        if (lastMessagePreviewByFriendId.get(row.sender_id) !== null) {
+            continue;
+        }
+
+        lastMessagePreviewByFriendId.set(row.sender_id, buildLastMessagePreview(row.content));
+
+        // 모든 친구를 채웠다면 남은 행은 볼 필요가 없다.
+        if ([...lastMessagePreviewByFriendId.values()].every((preview) => preview !== null)) {
+            break;
+        }
+    }
+
+    return lastMessagePreviewByFriendId;
 }
 
 async function listRelationRowsBetweenUsers(userId: string, friendUserId: string) {
@@ -102,7 +191,12 @@ export async function listFriendsForUser(userId: string) {
         return [] satisfies FriendListItem[];
     }
 
-    const friendById = await listUsersByIds(relations.map((relation) => relation.friend_id));
+    const friendIds = relations.map((relation) => relation.friend_id);
+    const [friendById, unreadCountByFriendId, lastMessagePreviewByFriendId] = await Promise.all([
+        listUsersByIds(friendIds),
+        listUnreadMessageCountsByFriend(userId, friendIds),
+        listLastMessagePreviewsByFriend(userId, friendIds),
+    ]);
 
     return relations.flatMap((relation) => {
         const friend = friendById.get(relation.friend_id);
@@ -114,6 +208,8 @@ export async function listFriendsForUser(userId: string) {
         return [{
             relationId: relation.id,
             friend,
+            unreadCount: unreadCountByFriendId.get(relation.friend_id) ?? 0,
+            lastMessagePreview: lastMessagePreviewByFriendId.get(relation.friend_id) ?? null,
         }] satisfies FriendListItem[];
     });
 }

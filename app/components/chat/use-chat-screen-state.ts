@@ -23,12 +23,20 @@ type MessageItem = {
     senderId: string;
     receiverId: string;
     content: string;
+    readAt: string | null;
     createdAt: string;
+};
+
+type ReadMessageCursor = {
+    id: string;
+    createdAt: string;
+    readAt: string;
 };
 
 type MessagesListResponse = {
     messages: MessageItem[];
     lastMessageCreatedAt: string | null;
+    lastReadOwnMessage: ReadMessageCursor | null;
     pollingIntervalSec: number;
 };
 
@@ -92,8 +100,78 @@ function mapMessageItemToChatMessage(message: MessageItem, friendId: string): Ch
         sender: message.senderId === friendId ? "friend" : "me",
         text: message.content,
         time: formatMessageTime(message.createdAt),
+        readAt: message.readAt,
         createdAt: message.createdAt,
     };
+}
+
+function compareChatMessageCursor(left: Pick<ChatMessage, "createdAt" | "id">, right: Pick<ReadMessageCursor, "createdAt" | "id">) {
+    const createdAtCompare = left.createdAt.localeCompare(right.createdAt);
+
+    if (createdAtCompare !== 0) {
+        return createdAtCompare;
+    }
+
+    return left.id.localeCompare(right.id);
+}
+
+function applyReadCursor(messages: ChatMessage[], readCursor: ReadMessageCursor | null) {
+    if (!readCursor) {
+        return messages;
+    }
+
+    // 마지막 읽음 커서 이전의 내 메시지 readAt 을 보정한다.
+    return messages.map((message) => message.sender === "me" && compareChatMessageCursor(message, readCursor) <= 0
+        ? { ...message, readAt: message.readAt ?? readCursor.readAt }
+        : message);
+}
+
+function mapMessagesListResponseToChatMessages(response: MessagesListResponse, friendId: string) {
+    return applyReadCursor(
+        response.messages.map((message) => mapMessageItemToChatMessage(message, friendId)),
+        response.lastReadOwnMessage,
+    );
+}
+
+function mergeMessagesListResponseWithCurrentMessages(input: {
+    currentMessages: ChatMessage[];
+    response: MessagesListResponse;
+    friendId: string;
+}) {
+    const readAppliedCurrentMessages = applyReadCursor(input.currentMessages, input.response.lastReadOwnMessage);
+
+    if (input.response.messages.length === 0) {
+        return readAppliedCurrentMessages;
+    }
+
+    return mergeChatMessages(
+        readAppliedCurrentMessages,
+        mapMessagesListResponseToChatMessages(input.response, input.friendId),
+    );
+}
+
+function buildMessageFeedStateFromMessagesResponse(input: {
+    friendId: string;
+    response: MessagesListResponse;
+    hasOlderMessages: boolean;
+    currentMessages?: ChatMessage[];
+}) {
+    // 초기 로드, polling, 더보기를 같은 정규화 경로로 합친다.
+    const nextMessages = input.currentMessages
+        ? mergeMessagesListResponseWithCurrentMessages({
+            currentMessages: input.currentMessages,
+            response: input.response,
+            friendId: input.friendId,
+        })
+        : mapMessagesListResponseToChatMessages(input.response, input.friendId);
+
+    return buildMessageFeedState(input.friendId, nextMessages, input.hasOlderMessages);
+}
+
+function resetUnreadCountForFriend(currentFriends: FriendItem[], friendId: string) {
+    return currentFriends.map((friend) => friend.id === friendId
+        ? { ...friend, unreadCount: 0 }
+        : friend);
 }
 
 function buildMessagesRequestUrl(input: {
@@ -357,10 +435,12 @@ export function useChatScreenState(requestedFriendId: string | null = null) {
                     return;
                 }
 
-                const nextMessages = result.data.messages.map((message) => mapMessageItemToChatMessage(message, activeFriendId));
-                setMessageState(
-                    buildMessageFeedState(activeFriendId, nextMessages, result.data.messages.length >= MESSAGE_PAGE_SIZE),
-                );
+                setMessageState(buildMessageFeedStateFromMessagesResponse({
+                    friendId: activeFriendId,
+                    response: result.data,
+                    hasOlderMessages: result.data.messages.length >= MESSAGE_PAGE_SIZE,
+                }));
+                setFriends((currentFriends) => resetUnreadCountForFriend(currentFriends, activeFriendId));
             } catch {
                 if (!isMounted) {
                     return;
@@ -418,18 +498,19 @@ export function useChatScreenState(requestedFriendId: string | null = null) {
                     return;
                 }
 
-                if (result.data.messages.length > 0) {
-                    const incomingMessages = result.data.messages.map((message) => mapMessageItemToChatMessage(message, activeFriendId));
+                setMessageState((currentMessageState) => {
+                    if (currentMessageState.friendId !== activeFriendId) {
+                        return currentMessageState;
+                    }
 
-                    setMessageState((currentMessageState) => {
-                        if (currentMessageState.friendId !== activeFriendId) {
-                            return currentMessageState;
-                        }
-
-                        const nextMessages = mergeChatMessages(currentMessageState.items, incomingMessages);
-                        return buildMessageFeedState(activeFriendId, nextMessages, currentMessageState.hasOlderMessages);
+                    return buildMessageFeedStateFromMessagesResponse({
+                        friendId: activeFriendId,
+                        response: result.data,
+                        hasOlderMessages: currentMessageState.hasOlderMessages,
+                        currentMessages: currentMessageState.items,
                     });
-                }
+                });
+                setFriends((currentFriends) => resetUnreadCountForFriend(currentFriends, activeFriendId));
             } catch {
                 if (!isMounted) {
                     return;
@@ -610,19 +691,17 @@ export function useChatScreenState(requestedFriendId: string | null = null) {
                 return false;
             }
 
-            const olderMessages = result.data.messages.map((message) => mapMessageItemToChatMessage(message, activeFriendId));
-
             setMessageState((currentMessageState) => {
                 if (currentMessageState.friendId !== activeFriendId) {
                     return currentMessageState;
                 }
 
-                const nextMessages = mergeChatMessages(currentMessageState.items, olderMessages);
-                return buildMessageFeedState(
-                    activeFriendId,
-                    nextMessages,
-                    result.data.messages.length >= MESSAGE_PAGE_SIZE,
-                );
+                return buildMessageFeedStateFromMessagesResponse({
+                    friendId: activeFriendId,
+                    response: result.data,
+                    hasOlderMessages: result.data.messages.length >= MESSAGE_PAGE_SIZE,
+                    currentMessages: currentMessageState.items,
+                });
             });
 
             return true;

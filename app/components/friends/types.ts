@@ -11,7 +11,10 @@ export type FriendItem = {
     id: string;
     nickname: string;
     status: string;
+    locationStatusLabel?: string | null;
     locationHint: string;
+    unreadCount: number;
+    lastMessagePreview?: string | null;
     locationSnapshot?: FriendLocationSnapshot;
 };
 

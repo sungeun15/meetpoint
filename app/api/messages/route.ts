@@ -1,6 +1,7 @@
 import { apiError, apiOk } from "@/lib/contracts/api";
 import { hasFriendRelation } from "@/lib/repositories/friends";
-import { createMessage, listMessagesBetweenUsers } from "@/lib/repositories/messages";
+import { createMessage } from "@/lib/repositories/messages";
+import { fetchConversationMessages } from "@/lib/services/message-service";
 import { createProtectedRoute } from "@/lib/utils/route-scaffold";
 import {
     InputValidationError,
@@ -22,12 +23,19 @@ type MessageCursorParams = {
     beforeId: string | null;
 };
 
+type ReadMessageCursorResponse = {
+    id: string;
+    createdAt: string;
+    readAt: string;
+};
+
 function normalizeMessageCursorParams(searchParams: URLSearchParams): MessageCursorParams {
     const parsedAfter = validateOptionalIsoDatetime(searchParams.get("after"));
     const parsedAfterId = validateOptionalUuid(searchParams.get("afterId"), "afterId");
     const parsedBefore = validateOptionalIsoDatetime(searchParams.get("before"));
     const parsedBeforeId = validateOptionalUuid(searchParams.get("beforeId"), "beforeId");
 
+    // 시간과 id 커서는 한 쌍으로만 인정한다.
     return {
         after: parsedAfter && parsedAfterId ? parsedAfter : null,
         afterId: parsedAfter && parsedAfterId ? parsedAfterId : null,
@@ -54,7 +62,7 @@ export const GET = createProtectedRoute(async (request, { currentUserId }) => {
             return apiError("FORBIDDEN_RELATION", "친구 관계가 없는 대상과는 메시지를 조회할 수 없습니다.", 403);
         }
 
-        const messages = await listMessagesBetweenUsers({
+        const { messages, lastMessageCreatedAt, lastReadOwnMessage } = await fetchConversationMessages({
             currentUserId,
             friendId,
             after,
@@ -63,11 +71,11 @@ export const GET = createProtectedRoute(async (request, { currentUserId }) => {
             beforeId,
             limit,
         });
-        const lastMessageCreatedAt = messages.at(-1)?.createdAt ?? null;
 
         return apiOk({
             messages,
             lastMessageCreatedAt,
+            lastReadOwnMessage: lastReadOwnMessage satisfies ReadMessageCursorResponse | null,
             pollingIntervalSec: MESSAGE_POLLING_INTERVAL_SECONDS,
         });
     } catch (error) {

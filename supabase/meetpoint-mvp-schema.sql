@@ -33,6 +33,7 @@ create table
         sender_id uuid not null, -- 메시지를 보낸 사용자 id
         receiver_id uuid not null, -- 메시지를 받은 사용자 id
         content varchar(500) not null, -- 메시지 본문
+        read_at timestamptz null, -- 수신자가 메시지를 읽은 시각
         created_at timestamptz not null default now (), -- 메시지 전송 시각
         constraint messages_sender_id_fkey foreign key (sender_id) references public.users (id) on delete cascade,
         constraint messages_receiver_id_fkey foreign key (receiver_id) references public.users (id) on delete cascade,
@@ -70,6 +71,8 @@ create index if not exists friends_friend_status_idx on public.friends (friend_i
 create index if not exists messages_sender_receiver_created_at_idx on public.messages (sender_id, receiver_id, created_at);
 
 create index if not exists messages_receiver_sender_created_at_idx on public.messages (receiver_id, sender_id, created_at);
+
+create index if not exists messages_receiver_sender_read_at_idx on public.messages (receiver_id, sender_id, read_at);
 
 create index if not exists departure_locations_user_last_used_at_idx on public.departure_locations (user_id, last_used_at desc);
 

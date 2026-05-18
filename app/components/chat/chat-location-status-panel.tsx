@@ -208,7 +208,7 @@ export function ChatLocationStatusPanel({
                     onClick={onShareLocation}
                     className={`${friendsHeadingFont.className} min-h-10 w-full shrink-0 rounded-xl px-3.5 py-1.5 text-[13px] font-bold md:w-auto md:min-h-11.5 md:px-4 md:py-2 md:text-[16px] xl:min-w-37`}
                 >
-                    위치 공유하기
+                    내 위치 공유하기
                 </ChatActionButton>
             </div>
 

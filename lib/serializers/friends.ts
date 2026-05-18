@@ -14,11 +14,17 @@ export function serializeFriendSummary(friend: UserSummary, relationId?: string)
         lat: friend.lat,
         lng: friend.lng,
         locationUpdatedAt: friend.locationUpdatedAt,
+        unreadCount: 0,
+        lastMessagePreview: null,
     };
 }
 
 export function serializeFriendListItem(item: FriendListItem): FriendSummary {
-    return serializeFriendSummary(item.friend, item.relationId);
+    return {
+        ...serializeFriendSummary(item.friend, item.relationId),
+        unreadCount: item.unreadCount,
+        lastMessagePreview: item.lastMessagePreview,
+    };
 }
 
 export function serializePendingFriendRequest(item: PendingFriendRequestListItem): PendingFriendRequestSummary {
