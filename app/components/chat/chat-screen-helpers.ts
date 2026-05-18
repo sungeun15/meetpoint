@@ -49,6 +49,7 @@ export function buildOutgoingChatMessage(friendId: string, text: string): ChatMe
         sender: "me",
         text,
         time: formatCurrentTime(),
+        readAt: null,
         createdAt,
     };
 }

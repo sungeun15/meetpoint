@@ -7,6 +7,8 @@ export type FriendSummary = {
     lat: number | null;
     lng: number | null;
     locationUpdatedAt: string | null;
+    unreadCount: number;
+    lastMessagePreview: string | null;
 };
 
 export type PendingFriendRequestSummary = FriendSummary & {

@@ -27,10 +27,16 @@ export function mapFriendSummaryToItem(friend: FriendSummary): FriendItem {
     const latitude = friend.lat;
     const longitude = friend.lng;
     const hasLocation = latitude !== null && longitude !== null;
+    const locationStatusLabel = hasLocation
+        ? (updatedLabel ? `최근 위치 공유: ${updatedLabel}` : "최근 위치 공유")
+        : "아직 공유되지 않음";
 
     return {
         id: friend.id,
         nickname: friend.nickname,
+        unreadCount: friend.unreadCount,
+        lastMessagePreview: friend.lastMessagePreview,
+        locationStatusLabel,
         status: hasLocation
             ? (updatedLabel ? `${updatedLabel} 위치를 공유했어요` : "최근 위치를 공유했어요")
             : "아직 위치를 공유하지 않았어요",
@@ -77,5 +83,8 @@ export function mapPendingFriendRequestToItem(
         direction,
         requestedAtLabel: formatRequestTimeLabel(request.requestedAt),
         status: direction === "incoming" ? "상대가 친구 요청을 보냈어요." : "상대의 수락을 기다리는 중이에요.",
+        locationStatusLabel: null,
+        unreadCount: 0,
+        lastMessagePreview: null,
     };
 }

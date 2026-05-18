@@ -4,6 +4,7 @@ export type ChatMessage = {
     sender: "friend" | "me";
     text: string;
     time: string;
+    readAt: string | null;
     createdAt: string;
 };
 

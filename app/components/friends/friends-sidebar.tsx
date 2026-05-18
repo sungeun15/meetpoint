@@ -35,21 +35,18 @@ export function FriendsSidebar({
     const triggerLabel = selectedFriendName ? `${selectedFriendName} 대화 보기` : "친구 목록 펼치기";
     const hasSearchQuery = friendSearch.trim().length > 0;
 
-    function formatSidebarSubtitle(friend: FriendItem) {
-        const sharedAt = friend.locationSnapshot?.sharedAt;
+    function formatUnreadBadgeCount(unreadCount: number) {
+        return unreadCount > 99 ? "99+" : String(unreadCount);
+    }
 
-        if (!sharedAt) {
-            return "아직 공유되지 않음";
+    function formatLastMessagePreview(friend: FriendItem) {
+        const normalizedPreview = friend.lastMessagePreview?.trim();
+
+        if (!normalizedPreview) {
+            return null;
         }
 
-        const matchedDate = sharedAt.match(/(\d{4})\.\s*(\d{1,2})\.\s*(\d{1,2})\./);
-
-        if (!matchedDate) {
-            return "최근 위치 공유";
-        }
-
-        const [, year, month, day] = matchedDate;
-        return `최근 위치 공유: ${year}.${month.padStart(2, "0")}.${day.padStart(2, "0")}`;
+        return normalizedPreview;
     }
 
     return (
@@ -98,7 +95,7 @@ export function FriendsSidebar({
                                 key={`friend-skeleton-${index}`}
                                 className="flex items-center gap-2.5 rounded-2xl border border-black/5 bg-[#faf8ff] px-3 py-2.5 sm:gap-4 sm:px-4 sm:py-4"
                             >
-                                <div className="h-10 w-10 shrink-0 animate-pulse rounded-full bg-[#e4defe] sm:h-12 sm:w-12 lg:h-13 lg:w-13" />
+                                <div className="h-8 w-8 shrink-0 animate-pulse rounded-full bg-[#e4defe] sm:h-10 sm:w-10 lg:h-11 lg:w-11" />
                                 <div className="min-w-0 flex-1 space-y-2">
                                     <div className="h-4 w-24 animate-pulse rounded-full bg-[#e9e4ff] sm:h-5 sm:w-32" />
                                     <div className="h-3 w-full max-w-[11rem] animate-pulse rounded-full bg-[#f1edff] sm:h-4" />
@@ -109,7 +106,8 @@ export function FriendsSidebar({
                         filteredFriends.map((friend) => {
                             const isSelected = friend.id === selectedFriendId;
                             const friendHref = getFriendHref?.(friend.id);
-                            const sidebarSubtitle = formatSidebarSubtitle(friend);
+                            const sidebarSubtitle = friend.locationStatusLabel ?? "아직 공유되지 않음";
+                            const lastMessagePreview = formatLastMessagePreview(friend);
                             const itemClassName = `flex w-full cursor-pointer items-center gap-2.5 rounded-2xl border bg-white px-3 py-2.5 text-left transition-all duration-200 sm:gap-4 sm:rounded-[18px] sm:px-4 sm:py-4 ${isSelected
                                 ? "border-[#6c5ce7] bg-[#f4f0ff] shadow-[0px_12px_30px_rgba(108,92,231,0.12)]"
                                 : "border-black/10 hover:border-[#c7bcff] hover:bg-[#faf8ff]"
@@ -118,15 +116,27 @@ export function FriendsSidebar({
                                 <>
                                     <FriendInitialAvatar
                                         nickname={friend.nickname}
-                                        className="h-10 w-10 text-[16px] sm:h-12 sm:w-12 sm:text-[20px] lg:h-13 lg:w-13 lg:text-[22px]"
+                                        className="h-8 w-8 text-[14px] sm:h-10 sm:w-10 sm:text-[17px] lg:h-11 lg:w-11 lg:text-[18px]"
                                     />
                                     <div className="min-w-0 flex-1">
-                                        <p className={`${friendsDisplayFont.className} truncate text-[16px] leading-none text-black sm:text-[20px] lg:text-[22px]`}>
-                                            {friend.nickname}
-                                        </p>
-                                        <p className={`${friendsBodyFont.className} mt-1 whitespace-normal break-keep text-[10px] leading-[1.45] text-[#6b7280] sm:mt-1.5 sm:text-[12px] lg:text-[13px]`}>
+                                        <div className="flex items-center gap-2">
+                                            <p className={`${friendsDisplayFont.className} truncate text-[16px] leading-none text-black sm:text-[20px] lg:text-[22px]`}>
+                                                {friend.nickname}
+                                            </p>
+                                            {friend.unreadCount > 0 && !isSelected ? (
+                                                <span className={`${friendsHeadingFont.className} inline-flex shrink-0 items-center justify-center rounded-full bg-[#f59e0b] px-2 py-0.5 text-[10px] leading-none text-white sm:text-[11px]`}>
+                                                    {formatUnreadBadgeCount(friend.unreadCount)}
+                                                </span>
+                                            ) : null}
+                                        </div>
+                                        <p className={`${friendsBodyFont.className} mt-1 truncate whitespace-nowrap text-[9px] leading-[1.4] text-[#6b7280] sm:mt-1.5 sm:text-[11px] lg:text-[12px]`}>
                                             {sidebarSubtitle}
                                         </p>
+                                        {lastMessagePreview ? (
+                                            <p className={`${friendsDisplayFont.className} mt-1 truncate text-[10px] leading-[1.35] text-[#374151] sm:text-[11px] lg:text-[12px]`}>
+                                                {lastMessagePreview}
+                                            </p>
+                                        ) : null}
                                     </div>
                                     <span className="shrink-0 text-[20px] leading-none text-[#6c5ce7] sm:text-[26px] lg:text-[28px]">›</span>
                                 </>

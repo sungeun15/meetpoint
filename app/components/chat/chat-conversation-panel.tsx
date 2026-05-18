@@ -22,6 +22,11 @@ type ChatConversationPanelProps = {
 type ChatMessageItemProps = {
     message: ChatMessage;
     friendName: string;
+    showName: boolean;
+    showTime: boolean;
+    showUnreadIndicator: boolean;
+    isGroupStart: boolean;
+    isGroupEnd: boolean;
 };
 
 type ConversationRow =
@@ -34,12 +39,20 @@ type ConversationRow =
         type: "message";
         key: string;
         message: ChatMessage;
+        showName: boolean;
+        showTime: boolean;
+        showUnreadIndicator: boolean;
+        isGroupStart: boolean;
+        isGroupEnd: boolean;
     };
 
 const MOBILE_OLDER_MESSAGES_AUTOLOAD_THRESHOLD_PX = 72;
 const DESKTOP_OLDER_MESSAGES_AUTOLOAD_THRESHOLD_PX = 120;
 const FRIEND_MESSAGE_NAME_CLASS_NAME = `${friendsBodyFont.className} px-1 text-[11px] text-[#4b5563] sm:text-[13px] lg:text-[15px]`;
 const MESSAGE_BUBBLE_BASE_CLASS_NAME = `${friendsDisplayFont.className} break-keep rounded-[14px] px-2 py-2 text-[13px] leading-[1.45] tracking-[0.01em] shadow-[0px_4px_10px_rgba(15,23,42,0.04)] sm:rounded-[16px] sm:px-3 sm:py-2.5 sm:text-[15px] lg:text-[17px]`;
+const MESSAGE_META_STACK_CLASS_NAME = "flex shrink-0 flex-col items-end gap-0.5 self-end sm:gap-1";
+const MESSAGE_UNREAD_CLASS_NAME = `${friendsHeadingFont.className} shrink-0 text-[10px] leading-none text-[#f59e0b] sm:text-[11px]`;
+const MESSAGE_TIME_CLASS_NAME = `${friendsBodyFont.className} shrink-0 translate-y-0.5 text-[9px] leading-none text-[#a5acbb] sm:text-[10px] lg:text-[11px]`;
 const MESSAGE_FORM_CLASS_NAME = "flex flex-col gap-2 rounded-[16px] border-t border-[#ebe8fb] bg-[#faf9ff] px-1.5 pt-3.5 pb-1.5 md:flex-row md:items-center md:gap-3 md:rounded-[18px] md:px-0 md:pt-3 md:pb-0 md:bg-transparent";
 const MESSAGE_INPUT_CLASS_NAME = `${friendsDisplayFont.className} h-[68px] flex-1 rounded-[11px] border-2 border-[#d8dbe6] bg-white px-3.5 py-3 text-[14px] text-[#111827] placeholder:text-[13px] placeholder:text-[#a3acbf] outline-none transition focus:border-[#8b7cf6] focus:shadow-[0_0_0_4px_rgba(108,92,231,0.08)] sm:h-[54px] sm:rounded-[12px] sm:px-4 sm:py-0 sm:text-[17px] sm:placeholder:text-[15px] lg:text-[20px]`;
 const MESSAGE_SEND_BUTTON_CLASS_NAME = `${friendsHeadingFont.className} min-h-10 w-full rounded-[11px] px-3.5 py-1 text-[13px] font-bold sm:min-h-[54px] sm:rounded-[12px] sm:px-5 sm:py-1.5 sm:text-[18px] md:w-[112px] lg:w-[120px]`;
@@ -85,56 +98,106 @@ function formatConversationDateLabel(createdAt: string) {
 
 function buildConversationRows(messages: ChatMessage[]) {
     const rows: ConversationRow[] = [];
-    let previousDateKey: string | null = null;
+    let lastRenderedDateKey: string | null = null;
 
-    for (const message of messages) {
+    for (let index = 0; index < messages.length; index += 1) {
+        const message = messages[index];
+        const previousMessage = index > 0 ? messages[index - 1] : null;
+        const nextMessage = messages[index + 1] ?? null;
         const dateKey = message.createdAt.slice(0, 10);
+        const previousMessageDateKey = previousMessage?.createdAt.slice(0, 10) ?? null;
+        const nextMessageDateKey = nextMessage?.createdAt.slice(0, 10) ?? null;
+        const currentMinuteKey = message.createdAt.slice(0, 16);
+        const nextMinuteKey = nextMessage?.createdAt.slice(0, 16) ?? null;
+        const showName = !previousMessage || previousMessage.sender !== message.sender || previousMessageDateKey !== dateKey;
+        const showUnreadIndicator = message.sender === "me"
+            && !message.readAt
+            && (!nextMessage || nextMessage.sender !== "me" || Boolean(nextMessage.readAt));
+        const showTime = showUnreadIndicator
+            || !nextMessage
+            || nextMessage.sender !== message.sender
+            || nextMinuteKey !== currentMinuteKey;
+        const isGroupStart = previousMessage !== null && (previousMessage.sender !== message.sender || previousMessageDateKey !== dateKey);
+        const isGroupEnd = !nextMessage || nextMessage.sender !== message.sender || nextMessageDateKey !== dateKey;
 
-        if (dateKey !== previousDateKey) {
+        if (dateKey !== lastRenderedDateKey) {
             rows.push({
                 type: "date-divider",
                 key: `date-divider-${dateKey}`,
                 label: formatConversationDateLabel(message.createdAt),
             });
-            previousDateKey = dateKey;
+            lastRenderedDateKey = dateKey;
         }
 
         rows.push({
             type: "message",
             key: message.id,
             message,
+            showName,
+            showTime,
+            showUnreadIndicator,
+            isGroupStart,
+            isGroupEnd,
         });
     }
 
     return rows;
 }
 
-function ChatMessageItem({ message, friendName }: ChatMessageItemProps) {
+function ChatMessageItem({ message, friendName, showName, showTime, showUnreadIndicator, isGroupStart, isGroupEnd }: ChatMessageItemProps) {
     const isMine = message.sender === "me";
+    const bubbleShapeClassName = isMine
+        ? `${!isGroupStart ? "rounded-tr-[8px]" : ""} ${!isGroupEnd ? "rounded-br-[8px]" : ""}`
+        : `${!isGroupStart ? "rounded-tl-[8px]" : ""} ${!isGroupEnd ? "rounded-bl-[8px]" : ""}`;
 
     return (
-        <div className={`flex ${isMine ? "justify-end" : "justify-start"}`}>
+        <div className={`flex ${isMine ? "justify-end" : "justify-start"} ${isGroupStart ? "mt-3.5 sm:mt-4" : ""}`}>
             <div className={`flex max-w-[94%] items-end gap-2 sm:max-w-[88%] sm:gap-3 lg:max-w-[min(84%,620px)] ${isMine ? "justify-end" : "justify-start"}`}>
-                {!isMine ? (
-                    <FriendInitialAvatar
-                        nickname={friendName}
-                        className="h-7 w-7 text-[11px] sm:h-9 sm:w-9 sm:text-[14px] lg:h-10 lg:w-10 lg:text-[16px]"
-                    />
-                ) : null}
+                {!isMine
+                    ? showName
+                        ? (
+                            <FriendInitialAvatar
+                                nickname={friendName}
+                                className="h-7 w-7 text-[11px] sm:h-9 sm:w-9 sm:text-[14px] lg:h-10 lg:w-10 lg:text-[16px]"
+                            />
+                        )
+                        : <div className="h-7 w-7 shrink-0 sm:h-9 sm:w-9 lg:h-10 lg:w-10" />
+                    : null}
 
                 <div className={`space-y-1.5 sm:space-y-2 ${isMine ? "items-end" : "items-start"}`}>
-                    {!isMine ? (
+                    {!isMine && showName ? (
                         <p className={FRIEND_MESSAGE_NAME_CLASS_NAME}>
                             {friendName}
                         </p>
                     ) : null}
-                    <div
-                        className={`${MESSAGE_BUBBLE_BASE_CLASS_NAME} ${isMine
-                            ? "bg-[#8378eb] text-[#fbfaff]"
-                            : "bg-[#f0ecf8] text-[#273142]"
-                            }`}
-                    >
-                        {message.text}
+                    <div className={`flex items-end gap-1 sm:gap-1 ${isMine ? "justify-end" : "justify-start"}`}>
+                        {isMine && (showUnreadIndicator || showTime) ? (
+                            <div className={MESSAGE_META_STACK_CLASS_NAME}>
+                                {showUnreadIndicator ? (
+                                    <p className={MESSAGE_UNREAD_CLASS_NAME}>
+                                        1
+                                    </p>
+                                ) : null}
+                                {showTime ? (
+                                    <p className={MESSAGE_TIME_CLASS_NAME}>
+                                        {message.time}
+                                    </p>
+                                ) : null}
+                            </div>
+                        ) : null}
+                        <div
+                            className={`${MESSAGE_BUBBLE_BASE_CLASS_NAME} ${bubbleShapeClassName} ${isMine
+                                ? "bg-[#8378eb] text-[#fbfaff]"
+                                : "bg-[#f0ecf8] text-[#273142]"
+                                }`}
+                        >
+                            {message.text}
+                        </div>
+                        {!isMine && showTime ? (
+                            <p className={MESSAGE_TIME_CLASS_NAME}>
+                                {message.time}
+                            </p>
+                        ) : null}
                     </div>
                 </div>
             </div>
@@ -279,7 +342,7 @@ export function ChatConversationPanel({
                     onScroll={handleConversationScroll}
                     className={`${isMobileConversationCollapsed ? "hidden sm:block" : "block"} h-[240px] overflow-y-auto pr-1 sm:h-[300px] sm:pr-2 lg:h-[340px] xl:h-[380px]`}
                 >
-                    <div className="flex min-h-full flex-col gap-3 sm:gap-4">
+                    <div className="flex min-h-full flex-col gap-2 sm:gap-3">
                         {isLoadingOlderMessages ? (
                             <div className="sticky top-0 z-10 flex justify-center">
                                 <div className="rounded-full border border-[#ddd8ff] bg-white/95 px-3 py-1.5 text-[11px] font-semibold text-[#5f47d2] shadow-[0px_8px_18px_rgba(108,92,231,0.08)] backdrop-blur sm:text-[12px]">
@@ -315,6 +378,11 @@ export function ChatConversationPanel({
                                     key={row.key}
                                     message={row.message}
                                     friendName={selectedFriend.nickname}
+                                    showName={row.showName}
+                                    showTime={row.showTime}
+                                    showUnreadIndicator={row.showUnreadIndicator}
+                                    isGroupStart={row.isGroupStart}
+                                    isGroupEnd={row.isGroupEnd}
                                 />
                             ))
                         ) : (
@@ -350,7 +418,7 @@ export function ChatConversationPanel({
                 </form>
 
                 {feedbackMessage ? (
-                    <p className={`${friendsBodyFont.className} break-keep text-[11px] leading-[1.6] text-[#dc2626] sm:text-[13px] lg:text-[14px]`}>
+                    <p className={`${friendsBodyFont.className} break-keep text-[11px] leading-[1.6] text-[#6c5ce7] sm:text-[13px] lg:text-[14px]`}>
                         {feedbackMessage}
                     </p>
                 ) : null}
