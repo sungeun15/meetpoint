@@ -41,12 +41,15 @@ export function formatCurrentTime() {
 }
 
 export function buildOutgoingChatMessage(friendId: string, text: string): ChatMessage {
+    const createdAt = new Date().toISOString();
+
     return {
         id: `${friendId}-${Date.now()}`,
         friendId,
         sender: "me",
         text,
         time: formatCurrentTime(),
+        createdAt,
     };
 }
 

@@ -7,6 +7,7 @@ export const initialChatMessages: ChatMessage[] = [
         sender: "friend",
         text: "지금 어디야?",
         time: "오전 10:12",
+        createdAt: "2026-05-17T01:12:00.000Z",
     },
     {
         id: "young-geol-2",
@@ -14,6 +15,7 @@ export const initialChatMessages: ChatMessage[] = [
         sender: "me",
         text: "지금 학교에 있어",
         time: "오전 10:14",
+        createdAt: "2026-05-17T01:14:00.000Z",
     },
     {
         id: "young-geol-3",
@@ -21,6 +23,7 @@ export const initialChatMessages: ChatMessage[] = [
         sender: "friend",
         text: "난 강남역 근처야",
         time: "오전 10:17",
+        createdAt: "2026-05-17T01:17:00.000Z",
     },
     {
         id: "young-geol-4",
@@ -28,6 +31,7 @@ export const initialChatMessages: ChatMessage[] = [
         sender: "me",
         text: "그럼 우리 중간쯤에서 만나자",
         time: "오전 10:18",
+        createdAt: "2026-05-17T01:18:00.000Z",
     },
     {
         id: "young-geol-5",
@@ -35,6 +39,7 @@ export const initialChatMessages: ChatMessage[] = [
         sender: "friend",
         text: "좋아 지도에서 중간 지점 확인해보자",
         time: "오전 10:20",
+        createdAt: "2026-05-17T01:20:00.000Z",
     },
     {
         id: "young-jun-1",
@@ -42,6 +47,7 @@ export const initialChatMessages: ChatMessage[] = [
         sender: "friend",
         text: "오늘 저녁에 시간 괜찮아?",
         time: "오후 01:08",
+        createdAt: "2026-05-17T04:08:00.000Z",
     },
     {
         id: "young-jun-2",
@@ -49,6 +55,7 @@ export const initialChatMessages: ChatMessage[] = [
         sender: "me",
         text: "좋아. 위치 공유하면 중간 지점부터 보자.",
         time: "오후 01:10",
+        createdAt: "2026-05-17T04:10:00.000Z",
     },
     {
         id: "ji-min-1",
@@ -56,6 +63,7 @@ export const initialChatMessages: ChatMessage[] = [
         sender: "friend",
         text: "곧 출발할게. 카페 쪽으로 갈 수 있어.",
         time: "오후 03:25",
+        createdAt: "2026-05-17T06:25:00.000Z",
     },
     {
         id: "min-seo-1",
@@ -63,5 +71,6 @@ export const initialChatMessages: ChatMessage[] = [
         sender: "friend",
         text: "카페 앞에 도착했어. 지도에서 위치 볼래?",
         time: "오후 05:42",
+        createdAt: "2026-05-17T08:42:00.000Z",
     },
 ];
