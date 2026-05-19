@@ -89,6 +89,12 @@ export function ChatScreen({ requestedFriendId = null }: ChatScreenProps) {
     } = useChatScreenState(requestedFriendId);
     const friendLastSharedAt = selectedFriend?.locationSnapshot?.sharedAt ?? null;
     const shouldShowLoadingPanels = isLoadingFriends && !selectedFriend;
+    const friendResolvedLocation = selectedFriend?.locationSnapshot ? {
+        label: `${selectedFriend.nickname} 현재 위치`,
+        address: selectedFriend.locationSnapshot.address,
+        latitude: selectedFriend.locationSnapshot.latitude,
+        longitude: selectedFriend.locationSnapshot.longitude,
+    } : null;
 
     function handleOpenSaveLocationLayer(
         party: DepartureParty,
@@ -231,7 +237,11 @@ export function ChatScreen({ requestedFriendId = null }: ChatScreenProps) {
 
                     {selectedFriend ? (
                         <div ref={topPanelsRef} className="grid min-w-0 gap-2.5 sm:gap-4 xl:gap-5">
-                            <ChatHeaderCard selectedFriend={selectedFriend} lastSharedAt={friendLastSharedAt} />
+                            <ChatHeaderCard
+                                selectedFriend={selectedFriend}
+                                lastSharedAt={friendLastSharedAt}
+                                friendResolvedLocation={friendResolvedLocation}
+                            />
 
                             <ChatConversationPanel
                                 selectedFriend={selectedFriend}
@@ -260,12 +270,7 @@ export function ChatScreen({ requestedFriendId = null }: ChatScreenProps) {
                                     latitude: mySharedLocation.latitude,
                                     longitude: mySharedLocation.longitude,
                                 } : null}
-                                friendResolvedLocation={selectedFriend.locationSnapshot ? {
-                                    label: `${selectedFriend.nickname} 현재 위치`,
-                                    address: selectedFriend.locationSnapshot.address,
-                                    latitude: selectedFriend.locationSnapshot.latitude,
-                                    longitude: selectedFriend.locationSnapshot.longitude,
-                                } : null}
+                                friendResolvedLocation={friendResolvedLocation}
                                 onShareLocationToFriend={() => handleShareLocationToFriend(handleOpenManualShareLayer)}
                                 onShareLocationToAllFriends={() => handleShareLocationToAllFriends(handleOpenManualShareLayer)}
                                 onOpenSaveLocationLayer={handleOpenSaveLocationLayer}

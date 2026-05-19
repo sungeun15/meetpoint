@@ -1,9 +1,8 @@
-import { useEffect, useRef, useState } from "react";
+import { useState } from "react";
 
-import { loadKakaoMapSdk } from "@/lib/kakao/map-loader";
 import { friendsBodyFont, friendsDisplayFont, friendsHeadingFont } from "../friends/fonts";
-import { ModalShell } from "../shared/modal-shell";
 import { ChatActionButton, ChatSectionCard } from "./chat-ui";
+import { ChatLocationMapLayer } from "./chat-location-map-layer";
 import type { ResolvedLocation } from "./types";
 
 type ChatLocationStatusPanelProps = {
@@ -47,54 +46,7 @@ export function ChatLocationStatusPanel({
     onOpenSaveLocationLayer,
 }: ChatLocationStatusPanelProps) {
     const [isMobileStatusCollapsed, setIsMobileStatusCollapsed] = useState(false);
-    const kakaoMapContainerRef = useRef<HTMLDivElement | null>(null);
     const [kakaoMapLayerState, setKakaoMapLayerState] = useState<KakaoMapLayerState | null>(null);
-    const [kakaoMapErrorMessage, setKakaoMapErrorMessage] = useState<string | null>(null);
-
-    useEffect(() => {
-        if (!kakaoMapLayerState || !kakaoMapContainerRef.current) {
-            return;
-        }
-
-        let isDisposed = false;
-        const container = kakaoMapContainerRef.current;
-        container.innerHTML = "";
-        setKakaoMapErrorMessage(null);
-
-        loadKakaoMapSdk()
-            .then((kakao) => {
-                if (isDisposed || !kakaoMapContainerRef.current) {
-                    return;
-                }
-
-                const position = new kakao.maps.LatLng(
-                    kakaoMapLayerState.location.latitude,
-                    kakaoMapLayerState.location.longitude,
-                );
-                const map = new kakao.maps.Map(kakaoMapContainerRef.current, {
-                    center: position,
-                    level: 3,
-                    mapTypeId: kakao.maps.MapTypeId.ROADMAP,
-                });
-                const zoomControl = new kakao.maps.ZoomControl();
-                map.addControl(zoomControl, kakao.maps.ControlPosition.RIGHT);
-
-                new kakao.maps.Marker({
-                    map,
-                    position,
-                });
-            })
-            .catch((error) => {
-                if (!isDisposed) {
-                    setKakaoMapErrorMessage(error instanceof Error ? error.message : "카카오맵을 불러오지 못했어요.");
-                }
-            });
-
-        return () => {
-            isDisposed = true;
-            container.innerHTML = "";
-        };
-    }, [kakaoMapLayerState]);
 
     function handleOpenKakaoMapLayer(title: string, location: ResolvedLocation | null) {
         if (!location) {
@@ -227,33 +179,12 @@ export function ChatLocationStatusPanel({
             </div>
 
             {kakaoMapLayerState ? (
-                <ModalShell
-                    title={`${kakaoMapLayerState.title} 맵 확인`}
+                <ChatLocationMapLayer
+                    title={kakaoMapLayerState.title}
                     description="현재 위치를 팝업 레이어 안에서 바로 확인합니다."
+                    location={kakaoMapLayerState.location}
                     onClose={() => setKakaoMapLayerState(null)}
-                    panelClassName="mx-auto max-w-225"
-                    contentClassName="px-0 py-0"
-                    notice={(
-                        <div className={`${friendsBodyFont.className} text-[12px] leading-5 text-[#5f6782]`}>
-                            {kakaoMapLayerState.location.address}
-                            <br />
-                            위도 {kakaoMapLayerState.location.latitude.toFixed(5)} · 경도 {kakaoMapLayerState.location.longitude.toFixed(5)}
-                        </div>
-                    )}
-                >
-                    {kakaoMapErrorMessage ? (
-                        <div className="flex h-[58vh] min-h-90 items-center justify-center bg-[#f8f6ff] px-4 text-center">
-                            <p className={`${friendsBodyFont.className} text-[13px] text-[#6b7280]`}>
-                                {kakaoMapErrorMessage}
-                            </p>
-                        </div>
-                    ) : (
-                        <div
-                            ref={kakaoMapContainerRef}
-                            className="h-[58vh] min-h-90 w-full border-0"
-                        />
-                    )}
-                </ModalShell>
+                />
             ) : null}
         </ChatSectionCard>
     );
