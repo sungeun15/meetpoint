@@ -241,10 +241,14 @@ export function ChatDepartureSettingsPanel({
                             setPostcodeLayerState(null);
                         }
                     },
-                }).embed(postcodeContainerRef.current, {
-                    autoClose: true,
-                    q: postcodeLayerState.initialQuery || undefined,
-                });
+                }).embed(postcodeContainerRef.current, postcodeLayerState.initialQuery.trim()
+                    ? {
+                        autoClose: true,
+                        q: postcodeLayerState.initialQuery.trim(),
+                    }
+                    : {
+                        autoClose: true,
+                    });
             })
             .catch((error) => {
                 if (!isDisposed) {

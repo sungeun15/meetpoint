@@ -1,8 +1,6 @@
-import { useEffect, useRef, useState } from "react";
+import { useState } from "react";
 
-import { loadKakaoMapSdk } from "@/lib/kakao/map-loader";
 import { friendsBodyFont, friendsDisplayFont, friendsHeadingFont } from "../friends/fonts";
-import { ModalShell } from "../shared/modal-shell";
 import { ChatActionButton, ChatSectionCard } from "./chat-ui";
 import type { ResolvedLocation } from "./types";
 
@@ -16,7 +14,9 @@ type ChatLocationStatusPanelProps = {
     friendLocationPreviewValue: string;
     myResolvedLocation: ResolvedLocation | null;
     friendResolvedLocation: ResolvedLocation | null;
-    onShareLocation: () => void;
+    onOpenLocationMap: (title: string, description: string, location: ResolvedLocation | null) => void;
+    onShareLocationToFriend: () => void;
+    onShareLocationToAllFriends: () => void;
     onOpenSaveLocationLayer: (
         party: "me" | "friend",
         previewValue: string,
@@ -24,11 +24,6 @@ type ChatLocationStatusPanelProps = {
         resolvedLocation?: ResolvedLocation,
         locationKind?: "recent" | "preset",
     ) => void;
-};
-
-type KakaoMapLayerState = {
-    title: string;
-    location: ResolvedLocation;
 };
 
 export function ChatLocationStatusPanel({
@@ -41,66 +36,12 @@ export function ChatLocationStatusPanel({
     friendLocationPreviewValue,
     myResolvedLocation,
     friendResolvedLocation,
-    onShareLocation,
+    onOpenLocationMap,
+    onShareLocationToFriend,
+    onShareLocationToAllFriends,
     onOpenSaveLocationLayer,
 }: ChatLocationStatusPanelProps) {
     const [isMobileStatusCollapsed, setIsMobileStatusCollapsed] = useState(false);
-    const kakaoMapContainerRef = useRef<HTMLDivElement | null>(null);
-    const [kakaoMapLayerState, setKakaoMapLayerState] = useState<KakaoMapLayerState | null>(null);
-    const [kakaoMapErrorMessage, setKakaoMapErrorMessage] = useState<string | null>(null);
-
-    useEffect(() => {
-        if (!kakaoMapLayerState || !kakaoMapContainerRef.current) {
-            return;
-        }
-
-        let isDisposed = false;
-        const container = kakaoMapContainerRef.current;
-        container.innerHTML = "";
-        setKakaoMapErrorMessage(null);
-
-        loadKakaoMapSdk()
-            .then((kakao) => {
-                if (isDisposed || !kakaoMapContainerRef.current) {
-                    return;
-                }
-
-                const position = new kakao.maps.LatLng(
-                    kakaoMapLayerState.location.latitude,
-                    kakaoMapLayerState.location.longitude,
-                );
-                const map = new kakao.maps.Map(kakaoMapContainerRef.current, {
-                    center: position,
-                    level: 3,
-                    mapTypeId: kakao.maps.MapTypeId.ROADMAP,
-                });
-                const zoomControl = new kakao.maps.ZoomControl();
-                map.addControl(zoomControl, kakao.maps.ControlPosition.RIGHT);
-
-                new kakao.maps.Marker({
-                    map,
-                    position,
-                });
-            })
-            .catch((error) => {
-                if (!isDisposed) {
-                    setKakaoMapErrorMessage(error instanceof Error ? error.message : "카카오맵을 불러오지 못했어요.");
-                }
-            });
-
-        return () => {
-            isDisposed = true;
-            container.innerHTML = "";
-        };
-    }, [kakaoMapLayerState]);
-
-    function handleOpenKakaoMapLayer(title: string, location: ResolvedLocation | null) {
-        if (!location) {
-            return;
-        }
-
-        setKakaoMapLayerState({ title, location });
-    }
 
     return (
         <ChatSectionCard className="min-w-0 overflow-hidden px-3 py-3 sm:px-5 sm:py-4.5 lg:px-6">
@@ -157,7 +98,11 @@ export function ChatLocationStatusPanel({
                                 {myResolvedLocation ? (
                                     <ChatActionButton
                                         variant="outline"
-                                        onClick={() => handleOpenKakaoMapLayer("내 위치", myResolvedLocation)}
+                                        onClick={() => onOpenLocationMap(
+                                            "내 위치",
+                                            "현재 위치를 팝업 레이어 안에서 바로 확인합니다.",
+                                            myResolvedLocation,
+                                        )}
                                         className={`${friendsHeadingFont.className} min-h-9 w-full rounded-xl px-3 py-1.5 text-[12px] font-bold sm:min-h-11 sm:px-3.5 sm:py-2 sm:text-[14px]`}
                                     >
                                         맵 확인
@@ -193,7 +138,11 @@ export function ChatLocationStatusPanel({
                                 {friendResolvedLocation ? (
                                     <ChatActionButton
                                         variant="outline"
-                                        onClick={() => handleOpenKakaoMapLayer("친구 위치", friendResolvedLocation)}
+                                        onClick={() => onOpenLocationMap(
+                                            "친구 위치",
+                                            "현재 위치를 팝업 레이어 안에서 바로 확인합니다.",
+                                            friendResolvedLocation,
+                                        )}
                                         className={`${friendsHeadingFont.className} min-h-9 w-full rounded-xl px-3 py-1.5 text-[12px] font-bold sm:min-h-11 sm:px-3.5 sm:py-2 sm:text-[14px]`}
                                     >
                                         맵 확인
@@ -204,43 +153,26 @@ export function ChatLocationStatusPanel({
                     </div>
                 </div>
 
-                <ChatActionButton
-                    onClick={onShareLocation}
-                    className={`${friendsHeadingFont.className} min-h-10 w-full shrink-0 rounded-xl px-3.5 py-1.5 text-[13px] font-bold md:w-auto md:min-h-11.5 md:px-4 md:py-2 md:text-[16px] xl:min-w-37`}
-                >
-                    내 위치 공유하기
-                </ChatActionButton>
+                <div className="grid w-full shrink-0 gap-2 md:w-auto xl:min-w-48">
+                    <ChatActionButton
+                        onClick={onShareLocationToFriend}
+                        className={`${friendsHeadingFont.className} min-h-10 w-full rounded-xl px-3.5 py-1.5 text-[13px] font-bold md:min-h-11.5 md:px-4 md:py-2 md:text-[15px]`}
+                    >
+                        현재 친구에게 공유
+                    </ChatActionButton>
+                    <ChatActionButton
+                        variant="outline"
+                        onClick={onShareLocationToAllFriends}
+                        className={`${friendsHeadingFont.className} min-h-10 w-full rounded-xl px-3.5 py-1.5 text-[13px] font-bold md:min-h-11.5 md:px-4 md:py-2 md:text-[15px]`}
+                    >
+                        친구 전체에게 공유
+                    </ChatActionButton>
+                    <p className={`${friendsBodyFont.className} px-1 text-[11px] leading-[1.55] text-[#6b7280] md:max-w-52 md:text-[12px]`}>
+                        자동으로 현재 위치를 찾지 못하면 지도에서 직접 위치를 지정하는 레이어가 바로 열려요.
+                    </p>
+                </div>
             </div>
 
-            {kakaoMapLayerState ? (
-                <ModalShell
-                    title={`${kakaoMapLayerState.title} 맵 확인`}
-                    description="현재 위치를 팝업 레이어 안에서 바로 확인합니다."
-                    onClose={() => setKakaoMapLayerState(null)}
-                    panelClassName="mx-auto max-w-225"
-                    contentClassName="px-0 py-0"
-                    notice={(
-                        <div className={`${friendsBodyFont.className} text-[12px] leading-5 text-[#5f6782]`}>
-                            {kakaoMapLayerState.location.address}
-                            <br />
-                            위도 {kakaoMapLayerState.location.latitude.toFixed(5)} · 경도 {kakaoMapLayerState.location.longitude.toFixed(5)}
-                        </div>
-                    )}
-                >
-                    {kakaoMapErrorMessage ? (
-                        <div className="flex h-[58vh] min-h-90 items-center justify-center bg-[#f8f6ff] px-4 text-center">
-                            <p className={`${friendsBodyFont.className} text-[13px] text-[#6b7280]`}>
-                                {kakaoMapErrorMessage}
-                            </p>
-                        </div>
-                    ) : (
-                        <div
-                            ref={kakaoMapContainerRef}
-                            className="h-[58vh] min-h-90 w-full border-0"
-                        />
-                    )}
-                </ModalShell>
-            ) : null}
         </ChatSectionCard>
     );
 }

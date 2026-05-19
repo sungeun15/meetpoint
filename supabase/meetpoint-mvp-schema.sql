@@ -9,9 +9,47 @@ create table
         lat double precision null, -- 마지막으로 공유한 위도
         lng double precision null, -- 마지막으로 공유한 경도
         location_updated_at timestamptz null, -- 마지막 위치 공유 시각
+        location_share_scope varchar(20) null, -- 현재 위치 공유 범위
+        location_share_target_user_id uuid null, -- friend 범위일 때 공유 대상 친구 id
         created_at timestamptz not null default now (), -- 계정 생성 시각
-        constraint users_nickname_normalized_key unique (nickname_normalized)
+        constraint users_nickname_normalized_key unique (nickname_normalized),
+        constraint users_location_share_scope_check check (location_share_scope in ('friend', 'all_friends')),
+        constraint users_location_share_target_user_id_fkey foreign key (location_share_target_user_id) references public.users (id) on delete set null
     );
+
+alter table public.users
+    add column if not exists location_share_scope varchar(20) null;
+
+alter table public.users
+    add column if not exists location_share_target_user_id uuid null;
+
+do $$
+begin
+    if not exists (
+        select 1
+        from pg_constraint
+        where conrelid = 'public.users'::regclass
+            and conname = 'users_location_share_scope_check'
+    ) then
+        alter table public.users
+            add constraint users_location_share_scope_check
+            check (location_share_scope in ('friend', 'all_friends'));
+    end if;
+
+    if not exists (
+        select 1
+        from pg_constraint
+        where conrelid = 'public.users'::regclass
+            and conname = 'users_location_share_target_user_id_fkey'
+    ) then
+        alter table public.users
+            add constraint users_location_share_target_user_id_fkey
+            foreign key (location_share_target_user_id)
+            references public.users (id)
+            on delete set null;
+    end if;
+end;
+$$;
 
 create table
     if not exists public.friends (
@@ -59,6 +97,8 @@ create table
 create index if not exists users_nickname_normalized_idx on public.users (nickname_normalized);
 
 create index if not exists users_location_updated_at_idx on public.users (location_updated_at);
+
+create index if not exists users_location_share_scope_idx on public.users (location_share_scope, location_share_target_user_id);
 
 create index if not exists friends_user_id_idx on public.friends (user_id);
 

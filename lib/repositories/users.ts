@@ -1,5 +1,6 @@
 import "server-only";
 
+import type { LocationShareScope } from "@/lib/location-share";
 import { getSupabaseAdminClient } from "@/lib/supabase/server";
 
 // users 테이블 raw row 구조를 그대로 표현해 DB 컬럼명과 앱 타입을 분리한다.
@@ -11,6 +12,8 @@ type UserRow = {
     lat: number | null;
     lng: number | null;
     location_updated_at: string | null;
+    location_share_scope: LocationShareScope | null;
+    location_share_target_user_id: string | null;
 };
 
 // 프론트 응답에 바로 사용할 사용자 요약 구조다.
@@ -20,6 +23,8 @@ export type UserSummary = {
     lat: number | null;
     lng: number | null;
     locationUpdatedAt: string | null;
+    locationShareScope: LocationShareScope | null;
+    locationShareTargetUserId: string | null;
 };
 
 // 로그인 검증에는 정규화 닉네임과 비밀번호 해시까지 필요하므로 별도 타입으로 확장한다.
@@ -38,6 +43,40 @@ function mapUserRow(row: UserRow): AuthUserRecord {
         lat: row.lat,
         lng: row.lng,
         locationUpdatedAt: row.location_updated_at,
+        locationShareScope: row.location_share_scope,
+        locationShareTargetUserId: row.location_share_target_user_id,
+    };
+}
+
+export function isLocationVisibleToViewer(input: {
+    owner: Pick<UserSummary, "lat" | "lng" | "locationShareScope" | "locationShareTargetUserId">;
+    viewerUserId: string;
+}) {
+    const { owner, viewerUserId } = input;
+
+    if (owner.lat === null || owner.lng === null) {
+        return false;
+    }
+
+    if (owner.locationShareScope === "all_friends") {
+        return true;
+    }
+
+    return owner.locationShareScope === "friend" && owner.locationShareTargetUserId === viewerUserId;
+}
+
+export function maskUserLocationForViewer(user: UserSummary, viewerUserId: string): UserSummary {
+    if (isLocationVisibleToViewer({ owner: user, viewerUserId })) {
+        return user;
+    }
+
+    return {
+        ...user,
+        lat: null,
+        lng: null,
+        locationUpdatedAt: null,
+        locationShareScope: null,
+        locationShareTargetUserId: null,
     };
 }
 
@@ -45,7 +84,7 @@ function mapUserRow(row: UserRow): AuthUserRecord {
 export async function findUserByNicknameNormalized(nicknameNormalized: string) {
     const { data, error } = await getSupabaseAdminClient()
         .from("users")
-        .select("id, nickname, nickname_normalized, password_hash, lat, lng, location_updated_at")
+        .select("id, nickname, nickname_normalized, password_hash, lat, lng, location_updated_at, location_share_scope, location_share_target_user_id")
         .eq("nickname_normalized", nicknameNormalized)
         .maybeSingle<UserRow>();
 
@@ -60,7 +99,7 @@ export async function findUserByNicknameNormalized(nicknameNormalized: string) {
 export async function findUserById(userId: string) {
     const { data, error } = await getSupabaseAdminClient()
         .from("users")
-        .select("id, nickname, nickname_normalized, password_hash, lat, lng, location_updated_at")
+        .select("id, nickname, nickname_normalized, password_hash, lat, lng, location_updated_at, location_share_scope, location_share_target_user_id")
         .eq("id", userId)
         .maybeSingle<UserRow>();
 
@@ -84,7 +123,7 @@ export async function createUser(input: {
             nickname_normalized: input.nicknameNormalized,
             password_hash: input.passwordHash,
         })
-        .select("id, nickname, nickname_normalized, password_hash, lat, lng, location_updated_at")
+        .select("id, nickname, nickname_normalized, password_hash, lat, lng, location_updated_at, location_share_scope, location_share_target_user_id")
         .single<UserRow>();
 
     if (error) {
@@ -94,17 +133,25 @@ export async function createUser(input: {
     return mapUserRow(data);
 }
 
-// 현재 사용자 위치 저장은 users 테이블의 마지막 공유 위치 필드를 직접 갱신한다.
-export async function updateUserLocation(input: { userId: string; lat: number; lng: number }) {
+// 현재 사용자 위치 저장은 마지막 공유 좌표와 공유 범위를 함께 갱신한다.
+export async function updateUserLocation(input: {
+    userId: string;
+    lat: number;
+    lng: number;
+    locationShareScope: LocationShareScope;
+    locationShareTargetUserId: string | null;
+}) {
     const { data, error } = await getSupabaseAdminClient()
         .from("users")
         .update({
             lat: input.lat,
             lng: input.lng,
             location_updated_at: new Date().toISOString(),
+            location_share_scope: input.locationShareScope,
+            location_share_target_user_id: input.locationShareTargetUserId,
         })
         .eq("id", input.userId)
-        .select("id, nickname, nickname_normalized, password_hash, lat, lng, location_updated_at")
+        .select("id, nickname, nickname_normalized, password_hash, lat, lng, location_updated_at, location_share_scope, location_share_target_user_id")
         .single<UserRow>();
 
     if (error) {

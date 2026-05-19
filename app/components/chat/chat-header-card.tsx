@@ -4,13 +4,16 @@ import { friendsBodyFont, friendsDisplayFont, friendsHeadingFont } from "../frie
 import type { FriendItem } from "../friends/types";
 import { FriendInitialAvatar } from "../shared/friend-initial-avatar";
 import { ChatActionButton, ChatSectionCard } from "./chat-ui";
+import type { ResolvedLocation } from "./types";
 
 type ChatHeaderCardProps = {
     selectedFriend: FriendItem;
     lastSharedAt: string | null;
+    friendResolvedLocation: ResolvedLocation | null;
+    onOpenLocationMap: (title: string, description: string, location: ResolvedLocation | null) => void;
 };
 
-export function ChatHeaderCard({ selectedFriend, lastSharedAt }: ChatHeaderCardProps) {
+export function ChatHeaderCard({ selectedFriend, lastSharedAt, friendResolvedLocation, onOpenLocationMap }: ChatHeaderCardProps) {
     const [isMobileHeaderCollapsed, setIsMobileHeaderCollapsed] = useState(true);
 
     return (
@@ -51,6 +54,12 @@ export function ChatHeaderCard({ selectedFriend, lastSharedAt }: ChatHeaderCardP
 
                 <ChatActionButton
                     variant="outline"
+                    onClick={() => onOpenLocationMap(
+                        `${selectedFriend.nickname} 위치`,
+                        "현재 대화 중인 친구의 공유 위치를 팝업 레이어 안에서 바로 확인합니다.",
+                        friendResolvedLocation,
+                    )}
+                    disabled={!friendResolvedLocation}
                     className={`${friendsDisplayFont.className} min-h-10 w-full rounded-[12px] px-3 py-1.5 text-[13px] sm:min-h-[46px] sm:w-auto sm:px-5 sm:py-2.5 sm:text-[16px] lg:text-[18px] xl:shrink-0`}
                 >
                     지도에서 위치 확인

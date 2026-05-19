@@ -1,7 +1,7 @@
 import { apiError, apiOk } from "@/lib/contracts/api";
 import { KakaoLocalApiError } from "@/lib/kakao/local";
 import { hasFriendRelation } from "@/lib/repositories/friends";
-import { findUserById } from "@/lib/repositories/users";
+import { findUserById, isLocationVisibleToViewer } from "@/lib/repositories/users";
 import {
     DepartureRequiredError,
     getRecommendations,
@@ -42,12 +42,12 @@ export const POST = createProtectedRoute(async (request, { currentUserId }) => {
             mode,
             category,
             currentUserLocation:
-                currentUser.lat !== null && currentUser.lng !== null
-                    ? { lat: currentUser.lat, lng: currentUser.lng }
+                isLocationVisibleToViewer({ owner: currentUser, viewerUserId: friendId })
+                    ? { lat: currentUser.lat!, lng: currentUser.lng! }
                     : null,
             friendLocation:
-                friendUser.lat !== null && friendUser.lng !== null
-                    ? { lat: friendUser.lat, lng: friendUser.lng }
+                isLocationVisibleToViewer({ owner: friendUser, viewerUserId: currentUserId })
+                    ? { lat: friendUser.lat!, lng: friendUser.lng! }
                     : null,
             departure: body.departure ? validateDeparturePoint(body.departure, "departure") : null,
             friendDeparture: body.friendDeparture

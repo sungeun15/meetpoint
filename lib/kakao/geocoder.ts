@@ -34,7 +34,6 @@ export async function resolveAddressCoordinates(addressCandidates: string[]) {
                     reject(new Error("주소 좌표를 확인하지 못했어요."));
                 },
                 {
-                    analyze_type: kakao.maps.services.AnalyzeType.EXACT,
                     size: 1,
                 },
             );

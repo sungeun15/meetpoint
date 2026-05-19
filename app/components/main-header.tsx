@@ -76,7 +76,7 @@ export function MainHeader({ isAuthenticated, userNickname }: MainHeaderProps) {
       actionKind: "link",
     },
   };
-  const headerConfig = isAuthenticated && isInAppPath
+  const headerConfig = isAuthenticated
     ? {
       actionLabel: "sign out",
       actionHref: "/login",
@@ -147,6 +147,8 @@ export function MainHeader({ isAuthenticated, userNickname }: MainHeaderProps) {
       router.push("/login");
       router.refresh();
     } catch {
+      setIsLoggingOut(false);
+    } finally {
       setIsLoggingOut(false);
     }
   }

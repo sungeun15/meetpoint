@@ -366,7 +366,7 @@ export function ChatConversationPanel({
                             </div>
                         ) : messages.length > 0 ? (
                             conversationRows.map((row) => row.type === "date-divider" ? (
-                                <div key={row.key} className="sticky top-0 z-5 -mx-1 flex justify-center py-1.5">
+                                <div key={row.key} className="-mx-1 flex justify-center py-1.5">
                                     <div className="inline-flex items-center rounded-full border border-[#ddd8ff] bg-white/92 px-3 py-1 shadow-[0px_8px_18px_rgba(108,92,231,0.08)] backdrop-blur sm:px-3.5">
                                         <p className={`${friendsBodyFont.className} shrink-0 text-[11px] font-semibold text-[#7a7399] sm:text-[12px]`}>
                                             {row.label}
