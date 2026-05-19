@@ -4,7 +4,7 @@ import type { FormEvent } from "react";
 import { useEffect, useMemo, useState } from "react";
 
 import type { ApiResponse } from "@/lib/contracts/api";
-import type { FriendsListResponse } from "@/lib/contracts/friends";
+import type { FriendsListResponse, LocationShareScope } from "@/lib/contracts/friends";
 
 import {
     buildFriendLocationStatus,
@@ -50,6 +50,8 @@ type LocationSaveResponse = {
         lng: number;
         locationUpdatedAt: string | null;
     };
+    locationShareScope: LocationShareScope;
+    locationShareTargetUserId: string | null;
 };
 
 type LocationLookupResponse = {
@@ -58,12 +60,16 @@ type LocationLookupResponse = {
         lng: number;
         locationUpdatedAt: string | null;
     } | null;
+    locationShareScope: LocationShareScope | null;
+    locationShareTargetUserId: string | null;
 };
 
 type ApiRequestResult<T> =
     | { status: "ok"; data: T }
     | { status: "unauthorized" }
     | { status: "error"; message: string };
+
+type ManualShareFallbackHandler = (scope: LocationShareScope) => void;
 
 const DEFAULT_MESSAGE_POLLING_INTERVAL_MS = 5000;
 const DEFAULT_FRIENDS_POLLING_INTERVAL_MS = 5000;
@@ -381,6 +387,8 @@ export function useChatScreenState(requestedFriendId: string | null = null) {
                     latitude: result.data.location.lat,
                     longitude: result.data.location.lng,
                     sharedAt: formatLocationUpdatedLabel(result.data.location.locationUpdatedAt) ?? "최근",
+                    shareScope: result.data.locationShareScope,
+                    sharedFriendId: result.data.locationShareTargetUserId,
                 });
             } catch {
                 if (!isMounted) {
@@ -555,6 +563,22 @@ export function useChatScreenState(requestedFriendId: string | null = null) {
         [activeFriendId, messageState.friendId, messageState.items],
     );
 
+    const myLocationForSelectedFriend = useMemo(() => {
+        if (!mySharedLocation) {
+            return null;
+        }
+
+        if (mySharedLocation.shareScope === "all_friends") {
+            return mySharedLocation;
+        }
+
+        if (mySharedLocation.shareScope === "friend" && mySharedLocation.sharedFriendId === activeFriendId) {
+            return mySharedLocation;
+        }
+
+        return null;
+    }, [activeFriendId, mySharedLocation]);
+
     const lastSharedAt = mySharedLocation?.sharedAt ?? null;
     const {
         meetingMode,
@@ -584,12 +608,12 @@ export function useChatScreenState(requestedFriendId: string | null = null) {
         handleRecommend,
     } = useRecommendationFlowState({
         activeFriendId,
-        mySharedLocation,
+        mySharedLocation: myLocationForSelectedFriend,
         selectedFriend,
         setFeedbackMessage,
     });
 
-    const myLocationStatus = buildMyLocationStatus(mySharedLocation);
+    const myLocationStatus = buildMyLocationStatus(mySharedLocation, selectedFriend);
     const friendLocationStatus = buildFriendLocationStatus(selectedFriend);
 
     function handleSelectFriend(friendId: string) {
@@ -713,70 +737,101 @@ export function useChatScreenState(requestedFriendId: string | null = null) {
         }
     }
 
-    function commitSharedLocation(nextLocation: ResolvedLocation, feedbackLabel: string) {
+    function commitSharedLocation(input: {
+        nextLocation: ResolvedLocation;
+        feedbackLabel: string;
+        locationShareScope: LocationShareScope;
+        locationShareTargetUserId: string | null;
+    }) {
         const nextTimestamp = formatCurrentTime();
 
         setMySharedLocation({
-            ...nextLocation,
+            ...input.nextLocation,
             sharedAt: nextTimestamp,
+            shareScope: input.locationShareScope,
+            sharedFriendId: input.locationShareTargetUserId,
         });
-        setFeedbackMessage(`${feedbackLabel} ${nextTimestamp}에 반영했어요.`);
+        setFeedbackMessage(`${input.feedbackLabel} ${nextTimestamp}에 반영했어요.`);
     }
 
-    function handleShareLocation() {
+    async function persistSharedLocation(scope: LocationShareScope, nextLocation: ResolvedLocation) {
+        if (scope === "friend" && !activeFriendId) {
+            setFeedbackMessage("위치를 공유할 친구를 먼저 선택해 주세요.");
+            return false;
+        }
+
+        try {
+            const result = await requestApi<LocationSaveResponse>("/api/location", "위치 저장 중 오류가 발생했습니다.", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                },
+                body: JSON.stringify({
+                    lat: nextLocation.latitude,
+                    lng: nextLocation.longitude,
+                    scope,
+                    friendId: scope === "friend" ? activeFriendId : null,
+                }),
+            });
+
+            if (result.status === "unauthorized") {
+                window.location.href = "/login";
+                return false;
+            }
+
+            if (result.status === "error") {
+                setFeedbackMessage(result.message);
+                return false;
+            }
+
+            commitSharedLocation({
+                nextLocation,
+                feedbackLabel: scope === "friend" ? "현재 친구에게 위치를" : "전체 친구에게 위치를",
+                locationShareScope: result.data.locationShareScope,
+                locationShareTargetUserId: result.data.locationShareTargetUserId,
+            });
+            return true;
+        } catch {
+            setFeedbackMessage("네트워크 오류로 위치를 저장하지 못했습니다.");
+            return false;
+        }
+    }
+
+    function shareLocation(scope: LocationShareScope, onManualShareFallback?: ManualShareFallbackHandler) {
         if (typeof navigator === "undefined" || !navigator.geolocation) {
-            setFeedbackMessage("브라우저에서 위치 정보를 지원하지 않아요.");
+            setFeedbackMessage("브라우저에서 위치 정보를 지원하지 않아 지도에서 직접 위치를 지정해 주세요.");
+            onManualShareFallback?.(scope);
             return;
         }
 
-        setFeedbackMessage("브라우저 현재 위치를 확인하고 있어요.");
+        if (scope === "friend" && !activeFriendId) {
+            setFeedbackMessage("위치를 공유할 친구를 먼저 선택해 주세요.");
+            return;
+        }
+
+        setFeedbackMessage(scope === "friend"
+            ? "현재 친구에게 공유할 위치를 확인하고 있어요."
+            : "전체 친구에게 공유할 위치를 확인하고 있어요.");
 
         navigator.geolocation.getCurrentPosition(
             async (position) => {
-                try {
-                    const result = await requestApi<LocationSaveResponse>("/api/location", "위치 저장 중 오류가 발생했습니다.", {
-                        method: "POST",
-                        headers: {
-                            "Content-Type": "application/json",
-                        },
-                        body: JSON.stringify({
-                            lat: position.coords.latitude,
-                            lng: position.coords.longitude,
-                        }),
-                    });
-
-                    if (result.status === "unauthorized") {
-                        window.location.href = "/login";
-                        return;
-                    }
-
-                    if (result.status === "error") {
-                        setFeedbackMessage(result.message);
-                        return;
-                    }
-
-                    commitSharedLocation(
-                        {
-                            label: "내 현재 위치",
-                            address: `브라우저 현재 위치 · ${formatLocationPreview({
-                                latitude: result.data.location.lat,
-                                longitude: result.data.location.lng,
-                            })}`,
-                            latitude: result.data.location.lat,
-                            longitude: result.data.location.lng,
-                        },
-                        "현재 위치를",
-                    );
-                } catch {
-                    setFeedbackMessage("네트워크 오류로 위치를 저장하지 못했습니다.");
-                }
+                await persistSharedLocation(scope, {
+                    label: "내 현재 위치",
+                    address: `브라우저 현재 위치 · ${formatLocationPreview({
+                        latitude: position.coords.latitude,
+                        longitude: position.coords.longitude,
+                    })}`,
+                    latitude: position.coords.latitude,
+                    longitude: position.coords.longitude,
+                });
             },
             (error) => {
                 setFeedbackMessage(
                     error.code === error.PERMISSION_DENIED
-                        ? "위치 권한이 없어 현재 위치를 공유하지 못했어요."
-                        : "정확한 위치를 읽지 못했어요. 잠시 후 다시 시도해 주세요.",
+                        ? "위치 권한이 없어 현재 위치를 공유하지 못했어요. 지도에서 직접 위치를 지정해 주세요."
+                        : "정확한 위치를 읽지 못했어요. 지도에서 직접 위치를 지정하거나 잠시 후 다시 시도해 주세요.",
                 );
+                onManualShareFallback?.(scope);
             },
             {
                 enableHighAccuracy: true,
@@ -784,6 +839,27 @@ export function useChatScreenState(requestedFriendId: string | null = null) {
                 maximumAge: 0,
             },
         );
+    }
+
+    function handleShareLocationToFriend(onManualShareFallback?: ManualShareFallbackHandler) {
+        shareLocation("friend", onManualShareFallback);
+    }
+
+    function handleShareLocationToAllFriends(onManualShareFallback?: ManualShareFallbackHandler) {
+        shareLocation("all_friends", onManualShareFallback);
+    }
+
+    async function handleShareResolvedLocation(scope: LocationShareScope, location: ResolvedLocation) {
+        setFeedbackMessage(scope === "friend"
+            ? "직접 지정한 위치를 현재 친구에게 공유하고 있어요."
+            : "직접 지정한 위치를 전체 친구에게 공유하고 있어요.");
+
+        return persistSharedLocation(scope, {
+            label: "내 지정 위치",
+            address: location.address,
+            latitude: location.latitude,
+            longitude: location.longitude,
+        });
     }
 
     return {
@@ -821,7 +897,9 @@ export function useChatScreenState(requestedFriendId: string | null = null) {
         handleDraftMessageChange,
         handleSendMessage,
         handleLoadOlderMessages,
-        handleShareLocation,
+        handleShareLocationToFriend,
+        handleShareLocationToAllFriends,
+        handleShareResolvedLocation,
         handleMeetingModeChange,
         handleCategoryChange,
         handleDepartureInputMethodChange,

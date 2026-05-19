@@ -36,6 +36,7 @@ export function mapFriendSummaryToItem(friend: FriendSummary): FriendItem {
         nickname: friend.nickname,
         unreadCount: friend.unreadCount,
         lastMessagePreview: friend.lastMessagePreview,
+        locationShareScope: friend.locationShareScope,
         locationStatusLabel,
         status: hasLocation
             ? (updatedLabel ? `${updatedLabel} 위치를 공유했어요` : "최근 위치를 공유했어요")

@@ -1,5 +1,7 @@
 export type FriendRelationState = "accepted" | "incoming_pending" | "outgoing_pending";
 
+export type LocationShareScope = "friend" | "all_friends";
+
 export type FriendSummary = {
     id: string;
     relationId?: string;
@@ -7,6 +9,7 @@ export type FriendSummary = {
     lat: number | null;
     lng: number | null;
     locationUpdatedAt: string | null;
+    locationShareScope: LocationShareScope | null;
     unreadCount: number;
     lastMessagePreview: string | null;
 };

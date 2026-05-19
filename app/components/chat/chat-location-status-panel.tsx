@@ -16,7 +16,8 @@ type ChatLocationStatusPanelProps = {
     friendLocationPreviewValue: string;
     myResolvedLocation: ResolvedLocation | null;
     friendResolvedLocation: ResolvedLocation | null;
-    onShareLocation: () => void;
+    onShareLocationToFriend: () => void;
+    onShareLocationToAllFriends: () => void;
     onOpenSaveLocationLayer: (
         party: "me" | "friend",
         previewValue: string,
@@ -41,7 +42,8 @@ export function ChatLocationStatusPanel({
     friendLocationPreviewValue,
     myResolvedLocation,
     friendResolvedLocation,
-    onShareLocation,
+    onShareLocationToFriend,
+    onShareLocationToAllFriends,
     onOpenSaveLocationLayer,
 }: ChatLocationStatusPanelProps) {
     const [isMobileStatusCollapsed, setIsMobileStatusCollapsed] = useState(false);
@@ -204,12 +206,24 @@ export function ChatLocationStatusPanel({
                     </div>
                 </div>
 
-                <ChatActionButton
-                    onClick={onShareLocation}
-                    className={`${friendsHeadingFont.className} min-h-10 w-full shrink-0 rounded-xl px-3.5 py-1.5 text-[13px] font-bold md:w-auto md:min-h-11.5 md:px-4 md:py-2 md:text-[16px] xl:min-w-37`}
-                >
-                    내 위치 공유하기
-                </ChatActionButton>
+                <div className="grid w-full shrink-0 gap-2 md:w-auto xl:min-w-48">
+                    <ChatActionButton
+                        onClick={onShareLocationToFriend}
+                        className={`${friendsHeadingFont.className} min-h-10 w-full rounded-xl px-3.5 py-1.5 text-[13px] font-bold md:min-h-11.5 md:px-4 md:py-2 md:text-[15px]`}
+                    >
+                        현재 친구에게 공유
+                    </ChatActionButton>
+                    <ChatActionButton
+                        variant="outline"
+                        onClick={onShareLocationToAllFriends}
+                        className={`${friendsHeadingFont.className} min-h-10 w-full rounded-xl px-3.5 py-1.5 text-[13px] font-bold md:min-h-11.5 md:px-4 md:py-2 md:text-[15px]`}
+                    >
+                        친구 전체에게 공유
+                    </ChatActionButton>
+                    <p className={`${friendsBodyFont.className} px-1 text-[11px] leading-[1.55] text-[#6b7280] md:max-w-52 md:text-[12px]`}>
+                        자동으로 현재 위치를 찾지 못하면 지도에서 직접 위치를 지정하는 레이어가 바로 열려요.
+                    </p>
+                </div>
             </div>
 
             {kakaoMapLayerState ? (

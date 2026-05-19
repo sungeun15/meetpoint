@@ -2,7 +2,7 @@ import "server-only";
 
 import type { FriendRelationState } from "@/lib/contracts/friends";
 import { getSupabaseAdminClient } from "@/lib/supabase/server";
-import type { UserSummary } from "@/lib/repositories/users";
+import { maskUserLocationForViewer, type UserSummary } from "@/lib/repositories/users";
 
 type FriendRelationRow = {
     id: string;
@@ -18,6 +18,8 @@ type FriendUserRow = {
     lat: number | null;
     lng: number | null;
     location_updated_at: string | null;
+    location_share_scope: UserSummary["locationShareScope"];
+    location_share_target_user_id: string | null;
 };
 
 type AcceptFriendRequestRpcRow = {
@@ -52,10 +54,12 @@ function mapFriendUserRow(row: FriendUserRow): UserSummary {
         lat: row.lat,
         lng: row.lng,
         locationUpdatedAt: row.location_updated_at,
+        locationShareScope: row.location_share_scope,
+        locationShareTargetUserId: row.location_share_target_user_id,
     };
 }
 
-async function listUsersByIds(userIds: string[]) {
+async function listUsersByIds(userIds: string[], viewerUserId?: string) {
     if (!userIds.length) {
         return new Map<string, UserSummary>();
     }
@@ -63,7 +67,7 @@ async function listUsersByIds(userIds: string[]) {
     const uniqueUserIds = [...new Set(userIds)];
     const { data, error } = await getSupabaseAdminClient()
         .from("users")
-        .select("id, nickname, lat, lng, location_updated_at")
+        .select("id, nickname, lat, lng, location_updated_at, location_share_scope, location_share_target_user_id")
         .in("id", uniqueUserIds)
         .returns<FriendUserRow[]>();
 
@@ -71,7 +75,14 @@ async function listUsersByIds(userIds: string[]) {
         throw error;
     }
 
-    return new Map(data.map((row) => [row.id, mapFriendUserRow(row)]));
+    return new Map(data.map((row) => {
+        const user = mapFriendUserRow(row);
+
+        return [
+            row.id,
+            viewerUserId ? maskUserLocationForViewer(user, viewerUserId) : user,
+        ] as const;
+    }));
 }
 
 async function listUnreadMessageCountsByFriend(userId: string, friendIds: string[]) {
@@ -193,7 +204,7 @@ export async function listFriendsForUser(userId: string) {
 
     const friendIds = relations.map((relation) => relation.friend_id);
     const [friendById, unreadCountByFriendId, lastMessagePreviewByFriendId] = await Promise.all([
-        listUsersByIds(friendIds),
+        listUsersByIds(friendIds, userId),
         listUnreadMessageCountsByFriend(userId, friendIds),
         listLastMessagePreviewsByFriend(userId, friendIds),
     ]);

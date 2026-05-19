@@ -45,7 +45,7 @@ import type {
 
 type UseRecommendationFlowStateArgs = {
     activeFriendId: string; // 현재 대화 중인 친구 id이며 추천 snapshot을 친구별로 구분하는 키입니다.
-    mySharedLocation: (ResolvedLocation & { sharedAt: string }) | null; // 내 현재 공유 위치입니다.
+    mySharedLocation: (ResolvedLocation & { sharedAt: string }) | null; // 현재 선택 친구에게 실제로 공유된 내 위치입니다.
     selectedFriend: FriendItem | null; // 위치/닉네임/마커 라벨 계산에 사용할 현재 선택 친구 정보입니다.
     setFeedbackMessage: Dispatch<SetStateAction<string | null>>; // 추천 진행 상태와 안내 문구를 상위 UI에 전달합니다.
 };
@@ -218,7 +218,32 @@ export function useRecommendationFlowState({
 }: UseRecommendationFlowStateArgs) {
     const [recommendationSnapshots, setRecommendationSnapshots] = useState<Record<string, RecommendationSnapshot>>({});
     const [savedDepartures, setSavedDepartures] = useState<SavedDeparture[]>([]);
-    const [savedDepartureOwners, setSavedDepartureOwners] = useState<Record<string, DepartureParty | null>>({});
+    const [savedDepartureOwners, setSavedDepartureOwners] = useState<Record<string, DepartureParty | null>>(() => {
+        if (typeof window === "undefined") {
+            return {};
+        }
+
+        try {
+            const rawValue = window.localStorage.getItem(SAVED_DEPARTURE_OWNER_STORAGE_KEY);
+
+            if (!rawValue) {
+                return {};
+            }
+
+            const parsedValue = JSON.parse(rawValue) as Record<string, unknown>;
+
+            return Object.entries(parsedValue).reduce<Record<string, DepartureParty>>((accumulator, [departureId, owner]) => {
+                if (owner === "me" || owner === "friend") {
+                    accumulator[departureId] = owner;
+                }
+
+                return accumulator;
+            }, {});
+        } catch {
+            window.localStorage.removeItem(SAVED_DEPARTURE_OWNER_STORAGE_KEY);
+            return {};
+        }
+    });
     const [meetingMode, setMeetingMode] = useState<MeetingMode>("now");
     const [selectedCategory, setSelectedCategory] = useState<RecommendationCategory>("cafe");
     const [departureInputMethod, setDepartureInputMethod] = useState<DepartureInputMethod>("search");
@@ -235,33 +260,6 @@ export function useRecommendationFlowState({
         me: null,
         friend: null,
     });
-
-    useEffect(() => {
-        if (typeof window === "undefined") {
-            return;
-        }
-
-        try {
-            const rawValue = window.localStorage.getItem(SAVED_DEPARTURE_OWNER_STORAGE_KEY);
-
-            if (!rawValue) {
-                return;
-            }
-
-            const parsedValue = JSON.parse(rawValue) as Record<string, unknown>;
-            const nextOwners = Object.entries(parsedValue).reduce<Record<string, DepartureParty>>((accumulator, [departureId, owner]) => {
-                if (owner === "me" || owner === "friend") {
-                    accumulator[departureId] = owner;
-                }
-
-                return accumulator;
-            }, {});
-
-            setSavedDepartureOwners(nextOwners);
-        } catch {
-            window.localStorage.removeItem(SAVED_DEPARTURE_OWNER_STORAGE_KEY);
-        }
-    }, []);
 
     useEffect(() => {
         if (typeof window === "undefined") {
@@ -323,23 +321,19 @@ export function useRecommendationFlowState({
         [savedDepartureOwners, savedDepartures],
     );
 
-    useEffect(() => {
-        if (!savedDepartures.length) {
-            setSelectedSavedDepartureIds({ me: "", friend: "" });
-            return;
-        }
-
-        setSelectedSavedDepartureIds((currentIds) => departurePartyOrder.reduce<Record<DepartureParty, string>>((accumulator, party) => {
+    const effectiveSelectedSavedDepartureIds = useMemo(
+        () => departurePartyOrder.reduce<Record<DepartureParty, string>>((accumulator, party) => {
             const departuresForParty = savedDeparturesByParty[party];
-            const hasCurrentSelection = departuresForParty.some((departure) => departure.id === currentIds[party]);
+            const hasCurrentSelection = departuresForParty.some((departure) => departure.id === selectedSavedDepartureIds[party]);
 
             accumulator[party] = hasCurrentSelection
-                ? currentIds[party]
+                ? selectedSavedDepartureIds[party]
                 : departuresForParty[0]?.id ?? "";
 
             return accumulator;
-        }, { me: "", friend: "" }));
-    }, [savedDepartures, savedDeparturesByParty]);
+        }, { me: "", friend: "" }),
+        [savedDeparturesByParty, selectedSavedDepartureIds],
+    );
 
     // 친구별로 캐시해 둔 추천 결과가 있으면 즉시 꺼내 쓰고, 없으면 미리보기 상태로 동작합니다.
     const activeRecommendationSnapshot = recommendationSnapshots[activeFriendId] ?? null;
@@ -371,7 +365,7 @@ export function useRecommendationFlowState({
     const hasMyLocationStatusData = Boolean(mySharedLocation);
     const hasFriendLocationStatusData = Boolean(friendLocation);
 
-    const selectedSavedDepartures = buildSelectedSavedDepartures(savedDepartures, selectedSavedDepartureIds);
+    const selectedSavedDepartures = buildSelectedSavedDepartures(savedDepartures, effectiveSelectedSavedDepartureIds);
 
     // 입력 방식에 따라 최종 추천에 사용할 출발지 라벨을 계산합니다.
     const selectedDepartureLabels = buildSelectedDepartureLabels({
@@ -863,7 +857,7 @@ export function useRecommendationFlowState({
         departureInputMethod,
         departureSearchQueries,
         visibleSavedDepartures,
-        selectedSavedDepartureIds,
+        selectedSavedDepartureIds: effectiveSelectedSavedDepartureIds,
         selectedDepartureLabels,
         recommendationSummary,
         canRecommend,

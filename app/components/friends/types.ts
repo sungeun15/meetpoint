@@ -1,4 +1,6 @@
-export type { FriendRelationState } from "@/lib/contracts/friends";
+export type { FriendRelationState, LocationShareScope } from "@/lib/contracts/friends";
+
+import type { LocationShareScope } from "@/lib/contracts/friends";
 
 export type FriendLocationSnapshot = {
     address: string;
@@ -13,6 +15,7 @@ export type FriendItem = {
     status: string;
     locationStatusLabel?: string | null;
     locationHint: string;
+    locationShareScope?: LocationShareScope | null;
     unreadCount: number;
     lastMessagePreview?: string | null;
     locationSnapshot?: FriendLocationSnapshot;

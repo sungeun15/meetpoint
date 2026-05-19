@@ -6,14 +6,17 @@ import type {
 import type { FriendListItem, PendingFriendRequestListItem } from "@/lib/repositories/friends";
 import type { UserSummary } from "@/lib/repositories/users";
 
-export function serializeFriendSummary(friend: UserSummary, relationId?: string): FriendSummary {
+export function serializeFriendSummary(friend: UserSummary, relationId?: string, options?: { hideLocation?: boolean }): FriendSummary {
+    const shouldHideLocation = options?.hideLocation ?? false;
+
     return {
         id: friend.id,
         relationId,
         nickname: friend.nickname,
-        lat: friend.lat,
-        lng: friend.lng,
-        locationUpdatedAt: friend.locationUpdatedAt,
+        lat: shouldHideLocation ? null : friend.lat,
+        lng: shouldHideLocation ? null : friend.lng,
+        locationUpdatedAt: shouldHideLocation ? null : friend.locationUpdatedAt,
+        locationShareScope: shouldHideLocation ? null : friend.locationShareScope,
         unreadCount: 0,
         lastMessagePreview: null,
     };
@@ -29,7 +32,7 @@ export function serializeFriendListItem(item: FriendListItem): FriendSummary {
 
 export function serializePendingFriendRequest(item: PendingFriendRequestListItem): PendingFriendRequestSummary {
     return {
-        ...serializeFriendSummary(item.user),
+        ...serializeFriendSummary(item.user, undefined, { hideLocation: true }),
         requestId: item.requestId,
         requestedAt: item.requestedAt,
     };
@@ -43,6 +46,6 @@ export function serializeFriendRequestCreated(input: {
     return {
         requestId: input.requestId,
         requestedAt: input.requestedAt,
-        friend: serializeFriendSummary(input.friend),
+        friend: serializeFriendSummary(input.friend, undefined, { hideLocation: true }),
     };
 }

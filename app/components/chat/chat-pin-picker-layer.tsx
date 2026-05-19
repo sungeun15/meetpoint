@@ -84,6 +84,7 @@ export function ChatPinPickerLayer({
     const visibleSearchResultLimit = 8;
     const mapContainerRef = useRef<HTMLDivElement | null>(null);
     const mapObjectsRef = useRef<PinMapObjects | null>(null);
+    const hasUserInteractedWithSearchRef = useRef(false);
     const [mapErrorMessage, setMapErrorMessage] = useState<string | null>(null);
     const [searchQuery, setSearchQuery] = useState("");
     const [searchResults, setSearchResults] = useState<PinSearchResult[]>([]);
@@ -91,6 +92,9 @@ export function ChatPinPickerLayer({
     const [isSearching, setIsSearching] = useState(false);
     const [pendingSelection, setPendingSelection] = useState<PendingPinSelection | null>(null);
     const [draftTitle, setDraftTitle] = useState(editableTitle?.initialValue ?? "");
+    const initialLatitude = initialLocation?.latitude ?? null;
+    const initialLongitude = initialLocation?.longitude ?? null;
+    const initialAddress = initialLocation?.address ?? null;
 
     function applyPendingSelection(address: string, latitude: number, longitude: number) {
         const mapObjects = mapObjectsRef.current;
@@ -119,6 +123,8 @@ export function ChatPinPickerLayer({
     }
 
     function handleSearchSubmit() {
+        hasUserInteractedWithSearchRef.current = true;
+
         const normalizedQuery = searchQuery.trim();
         const mapObjects = mapObjectsRef.current;
 
@@ -158,7 +164,6 @@ export function ChatPinPickerLayer({
                 setSearchFeedbackMessage(`검색 결과 ${Math.min(result.length, visibleSearchResultLimit)}개를 찾았어요.`);
             },
             {
-                analyze_type: mapObjects.sdk.maps.services.AnalyzeType.SIMILAR,
                 size: visibleSearchResultLimit,
             },
         );
@@ -232,23 +237,27 @@ export function ChatPinPickerLayer({
                     });
                 });
 
-                if (initialLocation) {
-                    const initialPosition = new kakao.maps.LatLng(initialLocation.latitude, initialLocation.longitude);
+                if (initialLatitude !== null && initialLongitude !== null) {
+                    const initialPosition = new kakao.maps.LatLng(initialLatitude, initialLongitude);
                     map.setCenter(initialPosition);
                     map.setLevel(3);
                     marker.setPosition(initialPosition);
                     marker.setMap(map);
 
-                    geocoder.coord2Address(initialLocation.longitude, initialLocation.latitude, (result, status) => {
+                    geocoder.coord2Address(initialLongitude, initialLatitude, (result, status) => {
                         if (isDisposed) {
                             return;
                         }
 
                         const resolvedAddress = status === kakao.maps.services.Status.OK && result[0]
-                            ? result[0].road_address?.address_name ?? result[0].address?.address_name ?? initialLocation.address
-                            : initialLocation.address;
+                            ? result[0].road_address?.address_name ?? result[0].address?.address_name ?? initialAddress ?? ""
+                            : initialAddress ?? "";
 
-                        applyPendingSelection(resolvedAddress, initialLocation.latitude, initialLocation.longitude);
+                        if (hasUserInteractedWithSearchRef.current) {
+                            return;
+                        }
+
+                        applyPendingSelection(resolvedAddress, initialLatitude, initialLongitude);
                         setSearchQuery(resolvedAddress);
                         setSearchFeedbackMessage("현재 저장된 위치를 불러왔어요. 주소를 검색하거나 지도를 눌러 다시 지정해 주세요.");
                     });
@@ -266,7 +275,7 @@ export function ChatPinPickerLayer({
             isDisposed = true;
             mapObjectsRef.current = null;
         };
-    }, [initialLocation, party]);
+    }, [initialAddress, initialLatitude, initialLongitude, party]);
 
     return (
         <ModalShell
@@ -290,27 +299,31 @@ export function ChatPinPickerLayer({
                         <p className={`${friendsHeadingFont.className} text-[15px] text-[#111827] sm:text-[16px]`}>
                             주소 검색
                         </p>
-                        <form
-                            className="mt-3 flex flex-col gap-2"
-                            onSubmit={(event) => {
-                                event.preventDefault();
-                                handleSearchSubmit();
-                            }}
-                        >
+                        <div className="mt-3 flex flex-col gap-2">
                             <input
                                 value={searchQuery}
-                                onChange={(event) => setSearchQuery(event.target.value)}
+                                onChange={(event) => {
+                                    hasUserInteractedWithSearchRef.current = true;
+                                    setSearchQuery(event.target.value);
+                                }}
+                                onKeyDown={(event) => {
+                                    if (event.key === "Enter") {
+                                        event.preventDefault();
+                                        handleSearchSubmit();
+                                    }
+                                }}
                                 placeholder="예: 강남역 10번 출구, 판교역로 166"
                                 className={`${friendsBodyFont.className} h-11 rounded-xl border border-[#ddd7ff] bg-[#faf8ff] px-4 text-[14px] text-[#111827] outline-none transition focus:border-[#6c5ce7]`}
                             />
                             <button
-                                type="submit"
+                                type="button"
+                                onClick={handleSearchSubmit}
                                 disabled={isSearching}
                                 className={`${friendsHeadingFont.className} min-h-11 rounded-xl border border-[#ddd7ff] bg-white px-4 py-2 text-[14px] font-bold text-[#5b43d6] transition-colors hover:bg-[#f8f6ff] disabled:cursor-not-allowed disabled:opacity-60`}
                             >
                                 {isSearching ? "주소 검색 중" : "주소 검색"}
                             </button>
-                        </form>
+                        </div>
 
                         {searchFeedbackMessage ? (
                             <p className={`${friendsBodyFont.className} mt-3 text-[12px] leading-[1.6] text-[#5f6782] sm:text-[13px]`}>
@@ -319,7 +332,7 @@ export function ChatPinPickerLayer({
                         ) : null}
 
                         {searchResults.length > 0 ? (
-                            <div className="mt-3 max-h-83 overflow-y-auto pr-1">
+                            <div className="mt-3 max-h-58 overflow-y-auto pr-1">
                                 <div className="grid gap-2">
                                     {searchResults.map((result) => (
                                         <button
@@ -331,7 +344,7 @@ export function ChatPinPickerLayer({
                                             <p className={`${friendsHeadingFont.className} text-[14px] text-[#111827] sm:text-[15px]`}>
                                                 {result.address}
                                             </p>
-                                            <p className={`${friendsBodyFont.className} mt-1 text-[11px] leading-[1.55] text-[#7a7399] sm:text-[12px]`}>
+                                            <p className={`${friendsBodyFont.className} mt-1 overflow-hidden text-ellipsis whitespace-nowrap text-[10px] leading-tight text-[#7a7399] sm:text-[11px]`}>
                                                 위도 {result.latitude.toFixed(6)} · 경도 {result.longitude.toFixed(6)}
                                             </p>
                                         </button>

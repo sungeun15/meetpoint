@@ -12,7 +12,7 @@ import {
     listPendingFriendRequestsForUser,
     rejectFriendRequest,
 } from "@/lib/repositories/friends";
-import { findUserById, findUserByNicknameNormalized } from "@/lib/repositories/users";
+import { findUserById, findUserByNicknameNormalized, maskUserLocationForViewer } from "@/lib/repositories/users";
 import {
     serializeFriendListItem,
     serializeFriendRequestCreated,
@@ -52,7 +52,7 @@ export const GET = createProtectedRoute(async (request, { currentUserId, current
                 : null;
 
             return apiOk({
-                friend: friendUser ? serializeFriendSummary(friendUser) : null,
+                friend: friendUser ? serializeFriendSummary(friendUser, undefined, { hideLocation: true }) : null,
                 relation,
             } satisfies FriendSearchResponse);
         }
@@ -158,7 +158,7 @@ export const PATCH = createProtectedRoute(async (request, { currentUserId }) => 
             return apiOk({
                 requestId: acceptedRequest.requestId,
                 action,
-                friend: serializeFriendSummary(friendUser),
+                friend: serializeFriendSummary(maskUserLocationForViewer(friendUser, currentUserId)),
             } satisfies FriendRequestActionResponse);
         }
 
