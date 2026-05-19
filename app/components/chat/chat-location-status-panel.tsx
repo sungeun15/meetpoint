@@ -2,7 +2,6 @@ import { useState } from "react";
 
 import { friendsBodyFont, friendsDisplayFont, friendsHeadingFont } from "../friends/fonts";
 import { ChatActionButton, ChatSectionCard } from "./chat-ui";
-import { ChatLocationMapLayer } from "./chat-location-map-layer";
 import type { ResolvedLocation } from "./types";
 
 type ChatLocationStatusPanelProps = {
@@ -15,6 +14,7 @@ type ChatLocationStatusPanelProps = {
     friendLocationPreviewValue: string;
     myResolvedLocation: ResolvedLocation | null;
     friendResolvedLocation: ResolvedLocation | null;
+    onOpenLocationMap: (title: string, description: string, location: ResolvedLocation | null) => void;
     onShareLocationToFriend: () => void;
     onShareLocationToAllFriends: () => void;
     onOpenSaveLocationLayer: (
@@ -24,11 +24,6 @@ type ChatLocationStatusPanelProps = {
         resolvedLocation?: ResolvedLocation,
         locationKind?: "recent" | "preset",
     ) => void;
-};
-
-type KakaoMapLayerState = {
-    title: string;
-    location: ResolvedLocation;
 };
 
 export function ChatLocationStatusPanel({
@@ -41,20 +36,12 @@ export function ChatLocationStatusPanel({
     friendLocationPreviewValue,
     myResolvedLocation,
     friendResolvedLocation,
+    onOpenLocationMap,
     onShareLocationToFriend,
     onShareLocationToAllFriends,
     onOpenSaveLocationLayer,
 }: ChatLocationStatusPanelProps) {
     const [isMobileStatusCollapsed, setIsMobileStatusCollapsed] = useState(false);
-    const [kakaoMapLayerState, setKakaoMapLayerState] = useState<KakaoMapLayerState | null>(null);
-
-    function handleOpenKakaoMapLayer(title: string, location: ResolvedLocation | null) {
-        if (!location) {
-            return;
-        }
-
-        setKakaoMapLayerState({ title, location });
-    }
 
     return (
         <ChatSectionCard className="min-w-0 overflow-hidden px-3 py-3 sm:px-5 sm:py-4.5 lg:px-6">
@@ -111,7 +98,11 @@ export function ChatLocationStatusPanel({
                                 {myResolvedLocation ? (
                                     <ChatActionButton
                                         variant="outline"
-                                        onClick={() => handleOpenKakaoMapLayer("내 위치", myResolvedLocation)}
+                                        onClick={() => onOpenLocationMap(
+                                            "내 위치",
+                                            "현재 위치를 팝업 레이어 안에서 바로 확인합니다.",
+                                            myResolvedLocation,
+                                        )}
                                         className={`${friendsHeadingFont.className} min-h-9 w-full rounded-xl px-3 py-1.5 text-[12px] font-bold sm:min-h-11 sm:px-3.5 sm:py-2 sm:text-[14px]`}
                                     >
                                         맵 확인
@@ -147,7 +138,11 @@ export function ChatLocationStatusPanel({
                                 {friendResolvedLocation ? (
                                     <ChatActionButton
                                         variant="outline"
-                                        onClick={() => handleOpenKakaoMapLayer("친구 위치", friendResolvedLocation)}
+                                        onClick={() => onOpenLocationMap(
+                                            "친구 위치",
+                                            "현재 위치를 팝업 레이어 안에서 바로 확인합니다.",
+                                            friendResolvedLocation,
+                                        )}
                                         className={`${friendsHeadingFont.className} min-h-9 w-full rounded-xl px-3 py-1.5 text-[12px] font-bold sm:min-h-11 sm:px-3.5 sm:py-2 sm:text-[14px]`}
                                     >
                                         맵 확인
@@ -178,14 +173,6 @@ export function ChatLocationStatusPanel({
                 </div>
             </div>
 
-            {kakaoMapLayerState ? (
-                <ChatLocationMapLayer
-                    title={kakaoMapLayerState.title}
-                    description="현재 위치를 팝업 레이어 안에서 바로 확인합니다."
-                    location={kakaoMapLayerState.location}
-                    onClose={() => setKakaoMapLayerState(null)}
-                />
-            ) : null}
         </ChatSectionCard>
     );
 }

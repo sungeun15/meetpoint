@@ -1,54 +1,14 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useRef, useState } from "react";
 
-import type { KakaoMapInstance, KakaoMarkerInstance } from "@/lib/kakao/map-loader";
-import { loadKakaoMapSdk } from "@/lib/kakao/map-loader";
 import { friendsBodyFont, friendsHeadingFont } from "../friends/fonts";
 import { ModalShell } from "../shared/modal-shell";
-import { createPersonMarkerImage } from "./recommendation/map/kakao-marker-icons";
+import {
+    type PinSearchResult,
+    useChatPinPickerMap,
+} from "./use-chat-pin-picker-map";
 import type { DepartureParty, ResolvedLocation } from "./types";
-
-type PendingPinSelection = {
-    address: string;
-    latitude: number;
-    longitude: number;
-};
-
-type PinSearchResult = {
-    id: string;
-    address: string;
-    latitude: number;
-    longitude: number;
-};
-
-type PinMapObjects = {
-    sdk: Awaited<ReturnType<typeof loadKakaoMapSdk>>;
-    map: KakaoMapInstance;
-    marker: KakaoMarkerInstance;
-    geocoder: {
-        addressSearch: (
-            addr: string,
-            callback: (result: Array<{ address_name: string; x: string; y: string }>, status: string) => void,
-            options?: {
-                page?: number;
-                size?: number;
-                analyze_type?: string;
-            },
-        ) => void;
-        coord2Address: (
-            x: number,
-            y: number,
-            callback: (
-                result: Array<{
-                    address?: { address_name: string };
-                    road_address?: { address_name: string };
-                }>,
-                status: string,
-            ) => void,
-        ) => void;
-    };
-};
 
 type ChatPinPickerLayerProps = {
     party: DepartureParty;
@@ -82,51 +42,33 @@ export function ChatPinPickerLayer({
     onConfirm,
 }: ChatPinPickerLayerProps) {
     const visibleSearchResultLimit = 8;
-    const mapContainerRef = useRef<HTMLDivElement | null>(null);
-    const mapObjectsRef = useRef<PinMapObjects | null>(null);
     const hasUserInteractedWithSearchRef = useRef(false);
-    const [mapErrorMessage, setMapErrorMessage] = useState<string | null>(null);
     const [searchQuery, setSearchQuery] = useState("");
     const [searchResults, setSearchResults] = useState<PinSearchResult[]>([]);
     const [searchFeedbackMessage, setSearchFeedbackMessage] = useState<string | null>(null);
     const [isSearching, setIsSearching] = useState(false);
-    const [pendingSelection, setPendingSelection] = useState<PendingPinSelection | null>(null);
     const [draftTitle, setDraftTitle] = useState(editableTitle?.initialValue ?? "");
-    const initialLatitude = initialLocation?.latitude ?? null;
-    const initialLongitude = initialLocation?.longitude ?? null;
-    const initialAddress = initialLocation?.address ?? null;
 
-    function applyPendingSelection(address: string, latitude: number, longitude: number) {
-        const mapObjects = mapObjectsRef.current;
+    const {
+        mapContainerRef,
+        mapErrorMessage,
+        pendingSelection,
+        clearPendingSelection,
+        handleSearchResultSelect,
+        searchAddress,
+    } = useChatPinPickerMap({
+        party,
+        initialLocation,
+        searchResultLimit: visibleSearchResultLimit,
+        hasUserInteractedWithSearchRef,
+        onSearchQueryHydrated: setSearchQuery,
+        onSearchFeedbackChange: setSearchFeedbackMessage,
+    });
 
-        if (!mapObjects) {
-            return;
-        }
-
-        const nextPosition = new mapObjects.sdk.maps.LatLng(latitude, longitude);
-        mapObjects.map.setCenter(nextPosition);
-        mapObjects.map.setLevel(3);
-        mapObjects.marker.setPosition(nextPosition);
-        mapObjects.marker.setMap(mapObjects.map);
-
-        setMapErrorMessage(null);
-        setPendingSelection({
-            address,
-            latitude,
-            longitude,
-        });
-    }
-
-    function handleSearchResultSelect(result: PinSearchResult) {
-        applyPendingSelection(result.address, result.latitude, result.longitude);
-        setSearchFeedbackMessage("검색 결과를 선택했어요. 아래에서 위치를 확인해 주세요.");
-    }
-
-    function handleSearchSubmit() {
+    async function handleSearchSubmit() {
         hasUserInteractedWithSearchRef.current = true;
 
         const normalizedQuery = searchQuery.trim();
-        const mapObjects = mapObjectsRef.current;
 
         if (!normalizedQuery) {
             setSearchResults([]);
@@ -134,148 +76,21 @@ export function ChatPinPickerLayer({
             return;
         }
 
-        if (!mapObjects) {
-            setSearchFeedbackMessage("지도를 아직 준비 중이에요. 잠시 후 다시 시도해 주세요.");
-            return;
-        }
-
         setIsSearching(true);
         setSearchFeedbackMessage(null);
 
-        mapObjects.geocoder.addressSearch(
-            normalizedQuery,
-            (result, status) => {
-                setIsSearching(false);
+        const searchResult = await searchAddress(normalizedQuery);
+        setIsSearching(false);
 
-                if (status !== mapObjects.sdk.maps.services.Status.OK || result.length === 0) {
-                    setSearchResults([]);
-                    setSearchFeedbackMessage("검색 결과가 없어요. 다른 주소나 건물명으로 다시 검색해 주세요.");
-                    return;
-                }
-
-                setSearchResults(
-                    result.slice(0, visibleSearchResultLimit).map((item, index) => ({
-                        id: `${item.address_name}-${index}`,
-                        address: item.address_name,
-                        latitude: Number(item.y),
-                        longitude: Number(item.x),
-                    })),
-                );
-                setSearchFeedbackMessage(`검색 결과 ${Math.min(result.length, visibleSearchResultLimit)}개를 찾았어요.`);
-            },
-            {
-                size: visibleSearchResultLimit,
-            },
-        );
-    }
-
-    useEffect(() => {
-        const container = mapContainerRef.current;
-
-        if (!container) {
+        if (searchResult.status === "error") {
+            setSearchResults([]);
+            setSearchFeedbackMessage(searchResult.message);
             return;
         }
 
-        let isDisposed = false;
-
-        async function setupMap() {
-            try {
-                const kakao = await loadKakaoMapSdk();
-
-                if (isDisposed || !mapContainerRef.current) {
-                    return;
-                }
-
-                const center = new kakao.maps.LatLng(37.5665, 126.978);
-                const map = new kakao.maps.Map(mapContainerRef.current, {
-                    center,
-                    level: 4,
-                });
-                const zoomControl = new kakao.maps.ZoomControl();
-                map.addControl(zoomControl, kakao.maps.ControlPosition.RIGHT);
-                const marker = new kakao.maps.Marker({
-                    map,
-                    position: center,
-                    image: createPersonMarkerImage(kakao, party),
-                });
-                marker.setMap(null);
-
-                const geocoder = new kakao.maps.services.Geocoder();
-                mapObjectsRef.current = {
-                    sdk: kakao,
-                    map,
-                    marker,
-                    geocoder,
-                };
-
-                kakao.maps.event.addListener(map, "click", (mouseEvent) => {
-                    const clickedPosition = mouseEvent.latLng;
-                    const latitude = clickedPosition.getLat();
-                    const longitude = clickedPosition.getLng();
-
-                    geocoder.coord2Address(longitude, latitude, (result, status) => {
-                        if (isDisposed) {
-                            return;
-                        }
-
-                        if (status !== kakao.maps.services.Status.OK || !result[0]) {
-                            setMapErrorMessage("해당 위치의 주소를 불러오지 못했어요. 다른 지점을 선택해 주세요.");
-                            setPendingSelection(null);
-                            return;
-                        }
-
-                        const resolvedAddress = result[0].road_address?.address_name ?? result[0].address?.address_name;
-
-                        if (!resolvedAddress) {
-                            setMapErrorMessage("해당 위치의 주소를 확인하지 못했어요. 다른 지점을 선택해 주세요.");
-                            setPendingSelection(null);
-                            return;
-                        }
-
-                        applyPendingSelection(resolvedAddress, latitude, longitude);
-                        setSearchFeedbackMessage("지도에서 위치를 선택했어요. 아래에서 확인해 주세요.");
-                    });
-                });
-
-                if (initialLatitude !== null && initialLongitude !== null) {
-                    const initialPosition = new kakao.maps.LatLng(initialLatitude, initialLongitude);
-                    map.setCenter(initialPosition);
-                    map.setLevel(3);
-                    marker.setPosition(initialPosition);
-                    marker.setMap(map);
-
-                    geocoder.coord2Address(initialLongitude, initialLatitude, (result, status) => {
-                        if (isDisposed) {
-                            return;
-                        }
-
-                        const resolvedAddress = status === kakao.maps.services.Status.OK && result[0]
-                            ? result[0].road_address?.address_name ?? result[0].address?.address_name ?? initialAddress ?? ""
-                            : initialAddress ?? "";
-
-                        if (hasUserInteractedWithSearchRef.current) {
-                            return;
-                        }
-
-                        applyPendingSelection(resolvedAddress, initialLatitude, initialLongitude);
-                        setSearchQuery(resolvedAddress);
-                        setSearchFeedbackMessage("현재 저장된 위치를 불러왔어요. 주소를 검색하거나 지도를 눌러 다시 지정해 주세요.");
-                    });
-                }
-            } catch (error) {
-                if (!isDisposed) {
-                    setMapErrorMessage(error instanceof Error ? error.message : "지도를 불러오지 못했어요.");
-                }
-            }
-        }
-
-        void setupMap();
-
-        return () => {
-            isDisposed = true;
-            mapObjectsRef.current = null;
-        };
-    }, [initialAddress, initialLatitude, initialLongitude, party]);
+        setSearchResults(searchResult.results);
+        setSearchFeedbackMessage(`검색 결과 ${searchResult.results.length}개를 찾았어요.`);
+    }
 
     return (
         <ModalShell
@@ -393,7 +208,7 @@ export function ChatPinPickerLayer({
                                 <div className="mt-4 flex gap-2">
                                     <button
                                         type="button"
-                                        onClick={() => setPendingSelection(null)}
+                                        onClick={clearPendingSelection}
                                         className={`${friendsBodyFont.className} min-h-11 flex-1 rounded-xl border border-[#ddd7ff] px-4 py-2 text-[13px] text-[#6b7280] transition-colors hover:bg-[#f8f6ff] sm:text-[14px]`}
                                     >
                                         다시 고르기

@@ -7,12 +7,19 @@ import type { ApiResponse } from "@/lib/contracts/api";
 import type { FriendsListResponse, LocationShareScope } from "@/lib/contracts/friends";
 
 import {
+    buildBrowserSharedLocation,
+    buildManualSharedLocation,
+    buildStoredSharedLocation,
+    getLocationShareCopy,
+    getLocationShareGeolocationErrorMessage,
+    getMissingLocationShareTargetMessage,
+} from "./chat-location-share-helpers";
+import {
     buildFriendLocationStatus,
     buildMyLocationStatus,
     formatCurrentTime,
     type SharedLocationState,
 } from "./chat-screen-helpers";
-import { formatLocationPreview } from "./data";
 import type { ChatMessage, ResolvedLocation } from "./types";
 import type { FriendItem } from "../friends/types";
 import { formatLocationUpdatedLabel, mapFriendSummaryToItem } from "../friends/mappers";
@@ -379,13 +386,7 @@ export function useChatScreenState(requestedFriendId: string | null = null) {
                 }
 
                 setMySharedLocation({
-                    label: "내 현재 위치",
-                    address: `공유한 위치 · ${formatLocationPreview({
-                        latitude: result.data.location.lat,
-                        longitude: result.data.location.lng,
-                    })}`,
-                    latitude: result.data.location.lat,
-                    longitude: result.data.location.lng,
+                    ...buildStoredSharedLocation(result.data.location.lat, result.data.location.lng),
                     sharedAt: formatLocationUpdatedLabel(result.data.location.locationUpdatedAt) ?? "최근",
                     shareScope: result.data.locationShareScope,
                     sharedFriendId: result.data.locationShareTargetUserId,
@@ -755,10 +756,14 @@ export function useChatScreenState(requestedFriendId: string | null = null) {
     }
 
     async function persistSharedLocation(scope: LocationShareScope, nextLocation: ResolvedLocation) {
-        if (scope === "friend" && !activeFriendId) {
-            setFeedbackMessage("위치를 공유할 친구를 먼저 선택해 주세요.");
+        const missingTargetMessage = getMissingLocationShareTargetMessage(scope, activeFriendId);
+
+        if (missingTargetMessage) {
+            setFeedbackMessage(missingTargetMessage);
             return false;
         }
+
+        const shareCopy = getLocationShareCopy(scope);
 
         try {
             const result = await requestApi<LocationSaveResponse>("/api/location", "위치 저장 중 오류가 발생했습니다.", {
@@ -786,7 +791,7 @@ export function useChatScreenState(requestedFriendId: string | null = null) {
 
             commitSharedLocation({
                 nextLocation,
-                feedbackLabel: scope === "friend" ? "현재 친구에게 위치를" : "전체 친구에게 위치를",
+                feedbackLabel: shareCopy.successLabel,
                 locationShareScope: result.data.locationShareScope,
                 locationShareTargetUserId: result.data.locationShareTargetUserId,
             });
@@ -804,33 +809,23 @@ export function useChatScreenState(requestedFriendId: string | null = null) {
             return;
         }
 
-        if (scope === "friend" && !activeFriendId) {
-            setFeedbackMessage("위치를 공유할 친구를 먼저 선택해 주세요.");
+        const missingTargetMessage = getMissingLocationShareTargetMessage(scope, activeFriendId);
+
+        if (missingTargetMessage) {
+            setFeedbackMessage(missingTargetMessage);
             return;
         }
 
-        setFeedbackMessage(scope === "friend"
-            ? "현재 친구에게 공유할 위치를 확인하고 있어요."
-            : "전체 친구에게 공유할 위치를 확인하고 있어요.");
+        const shareCopy = getLocationShareCopy(scope);
+
+        setFeedbackMessage(shareCopy.checkingMessage);
 
         navigator.geolocation.getCurrentPosition(
             async (position) => {
-                await persistSharedLocation(scope, {
-                    label: "내 현재 위치",
-                    address: `브라우저 현재 위치 · ${formatLocationPreview({
-                        latitude: position.coords.latitude,
-                        longitude: position.coords.longitude,
-                    })}`,
-                    latitude: position.coords.latitude,
-                    longitude: position.coords.longitude,
-                });
+                await persistSharedLocation(scope, buildBrowserSharedLocation(position.coords.latitude, position.coords.longitude));
             },
             (error) => {
-                setFeedbackMessage(
-                    error.code === error.PERMISSION_DENIED
-                        ? "위치 권한이 없어 현재 위치를 공유하지 못했어요. 지도에서 직접 위치를 지정해 주세요."
-                        : "정확한 위치를 읽지 못했어요. 지도에서 직접 위치를 지정하거나 잠시 후 다시 시도해 주세요.",
-                );
+                setFeedbackMessage(getLocationShareGeolocationErrorMessage(error.code));
                 onManualShareFallback?.(scope);
             },
             {
@@ -850,16 +845,9 @@ export function useChatScreenState(requestedFriendId: string | null = null) {
     }
 
     async function handleShareResolvedLocation(scope: LocationShareScope, location: ResolvedLocation) {
-        setFeedbackMessage(scope === "friend"
-            ? "직접 지정한 위치를 현재 친구에게 공유하고 있어요."
-            : "직접 지정한 위치를 전체 친구에게 공유하고 있어요.");
+        setFeedbackMessage(getLocationShareCopy(scope).manualShareMessage);
 
-        return persistSharedLocation(scope, {
-            label: "내 지정 위치",
-            address: location.address,
-            latitude: location.latitude,
-            longitude: location.longitude,
-        });
+        return persistSharedLocation(scope, buildManualSharedLocation(location));
     }
 
     return {

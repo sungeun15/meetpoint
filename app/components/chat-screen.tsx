@@ -6,6 +6,7 @@ import type { LocationShareScope } from "@/lib/contracts/friends";
 
 import { ChatConversationPanel } from "./chat/chat-conversation-panel";
 import { ChatHeaderCard } from "./chat/chat-header-card";
+import { ChatLocationMapLayer } from "./chat/chat-location-map-layer";
 import { ChatLocationStatusPanel } from "./chat/chat-location-status-panel";
 import { ChatPinPickerLayer } from "./chat/chat-pin-picker-layer";
 import { ChatRecommendationPanels } from "./chat/recommendation/chat-recommendation-panels";
@@ -31,11 +32,18 @@ type PendingManualShare = {
     scope: LocationShareScope;
 };
 
+type ActiveLocationMap = {
+    title: string;
+    description: string;
+    location: ResolvedLocation;
+};
+
 export function ChatScreen({ requestedFriendId = null }: ChatScreenProps) {
     const topPanelsRef = useRef<HTMLDivElement | null>(null);
     const sidebarPanelRef = useRef<HTMLDivElement | null>(null);
     const [pendingLocationSave, setPendingLocationSave] = useState<PendingLocationSave | null>(null);
     const [pendingManualShare, setPendingManualShare] = useState<PendingManualShare | null>(null);
+    const [activeLocationMap, setActiveLocationMap] = useState<ActiveLocationMap | null>(null);
     const [isMobileSidebarCollapsed, setIsMobileSidebarCollapsed] = useState(true);
     const {
         isLoadingFriends,
@@ -89,6 +97,12 @@ export function ChatScreen({ requestedFriendId = null }: ChatScreenProps) {
     } = useChatScreenState(requestedFriendId);
     const friendLastSharedAt = selectedFriend?.locationSnapshot?.sharedAt ?? null;
     const shouldShowLoadingPanels = isLoadingFriends && !selectedFriend;
+    const myResolvedLocation = mySharedLocation ? {
+        label: mySharedLocation.label,
+        address: mySharedLocation.address,
+        latitude: mySharedLocation.latitude,
+        longitude: mySharedLocation.longitude,
+    } : null;
     const friendResolvedLocation = selectedFriend?.locationSnapshot ? {
         label: `${selectedFriend.nickname} 현재 위치`,
         address: selectedFriend.locationSnapshot.address,
@@ -124,6 +138,18 @@ export function ChatScreen({ requestedFriendId = null }: ChatScreenProps) {
 
     function handleCloseManualShareLayer() {
         setPendingManualShare(null);
+    }
+
+    function handleOpenLocationMap(title: string, description: string, location: ResolvedLocation | null) {
+        if (!location) {
+            return;
+        }
+
+        setActiveLocationMap({ title, description, location });
+    }
+
+    function handleCloseLocationMap() {
+        setActiveLocationMap(null);
     }
 
     async function handleConfirmSaveLocation(nextTitle: string) {
@@ -241,6 +267,7 @@ export function ChatScreen({ requestedFriendId = null }: ChatScreenProps) {
                                 selectedFriend={selectedFriend}
                                 lastSharedAt={friendLastSharedAt}
                                 friendResolvedLocation={friendResolvedLocation}
+                                onOpenLocationMap={handleOpenLocationMap}
                             />
 
                             <ChatConversationPanel
@@ -264,13 +291,9 @@ export function ChatScreen({ requestedFriendId = null }: ChatScreenProps) {
                                 canSaveFriendLocation={hasFriendLocationStatusData}
                                 myLocationPreviewValue={mySharedLocation?.address ?? ""}
                                 friendLocationPreviewValue={selectedFriend.locationSnapshot?.address ?? ""}
-                                myResolvedLocation={mySharedLocation ? {
-                                    label: mySharedLocation.label,
-                                    address: mySharedLocation.address,
-                                    latitude: mySharedLocation.latitude,
-                                    longitude: mySharedLocation.longitude,
-                                } : null}
+                                myResolvedLocation={myResolvedLocation}
                                 friendResolvedLocation={friendResolvedLocation}
+                                onOpenLocationMap={handleOpenLocationMap}
                                 onShareLocationToFriend={() => handleShareLocationToFriend(handleOpenManualShareLayer)}
                                 onShareLocationToAllFriends={() => handleShareLocationToAllFriends(handleOpenManualShareLayer)}
                                 onOpenSaveLocationLayer={handleOpenSaveLocationLayer}
@@ -388,6 +411,15 @@ export function ChatScreen({ requestedFriendId = null }: ChatScreenProps) {
                         } : null}
                         onClose={handleCloseManualShareLayer}
                         onConfirm={handleConfirmManualShare}
+                    />
+                ) : null}
+
+                {activeLocationMap ? (
+                    <ChatLocationMapLayer
+                        title={activeLocationMap.title}
+                        description={activeLocationMap.description}
+                        location={activeLocationMap.location}
+                        onClose={handleCloseLocationMap}
                     />
                 ) : null}
             </div>
