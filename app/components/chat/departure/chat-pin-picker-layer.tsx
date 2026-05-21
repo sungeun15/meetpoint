@@ -2,29 +2,43 @@
 
 import { useRef, useState } from "react";
 
-import { friendsBodyFont, friendsHeadingFont } from "../friends/fonts";
-import { ModalShell } from "../shared/modal-shell";
+import { friendsBodyFont, friendsHeadingFont } from "../../friends/fonts";
+import { ModalShell } from "../../shared/modal-shell";
 import {
     type PinSearchResult,
     useChatPinPickerMap,
 } from "./use-chat-pin-picker-map";
-import type { DepartureParty, ResolvedLocation } from "./types";
+import type { DepartureParty, ResolvedLocation } from "../types";
 
 type ChatPinPickerLayerProps = {
+    // 내 출발지인지 친구 출발지인지 나타냅니다.
     party: DepartureParty;
+    // 화면 문구에 표시할 파티 라벨입니다.
     partyLabel: string;
+    // 모달 상단 제목을 덮어쓸 때 사용합니다.
     title?: string;
+    // 모달 상단 설명 문구를 덮어쓸 때 사용합니다.
     description?: string;
+    // 확인 버튼 문구를 덮어쓸 때 사용합니다.
     confirmLabel?: string;
+    // 선택된 위치 확인 영역 안내 문구입니다.
     selectionPrompt?: string;
+    // 아직 위치를 고르지 않았을 때 보여줄 안내 문구입니다.
     emptySelectionMessage?: string;
+    // 수정 모드에서 처음 띄울 위치값입니다.
     initialLocation?: ResolvedLocation | null;
+    // 저장 위치 수정 모드에서 제목 편집 필드를 구성합니다.
     editableTitle?: {
+        // 제목 입력 초기값입니다.
         initialValue: string;
+        // 제목 입력 필드 라벨입니다.
         label: string;
+        // 제목 입력 placeholder 문구입니다.
         placeholder: string;
     };
+    // 모달을 닫습니다.
     onClose: () => void;
+    // 현재 고른 위치를 확정합니다.
     onConfirm: (location: ResolvedLocation, nextTitle?: string) => void;
 };
 

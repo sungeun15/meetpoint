@@ -5,9 +5,11 @@ import {
     listSavedDepartureLocations,
     updateDepartureLocation,
 } from "@/lib/repositories/departures";
+import { hasFriendRelation } from "@/lib/repositories/friends";
 import { createProtectedRoute } from "@/lib/utils/route-scaffold";
 import {
     InputValidationError,
+    validateDepartureAddress,
     validateCoordinates,
     validateDepartureLabel,
     validateLimit,
@@ -16,6 +18,32 @@ import {
 } from "@/lib/utils/validation";
 
 export const dynamic = "force-dynamic";
+
+function validateDepartureOwnerParty(value: unknown) {
+    if (value !== "me" && value !== "friend") {
+        throw new InputValidationError("ownerParty는 me 또는 friend 이어야 합니다.");
+    }
+
+    return value;
+}
+
+function validateFriendNickname(value: unknown) {
+    if (typeof value !== "string") {
+        throw new InputValidationError("friendNickname은 문자열이어야 합니다.");
+    }
+
+    const normalizedNickname = value.trim();
+
+    if (!normalizedNickname) {
+        throw new InputValidationError("friendNickname을 입력해 주세요.");
+    }
+
+    if (normalizedNickname.length > 100) {
+        throw new InputValidationError("friendNickname은 100자 이하만 허용합니다.");
+    }
+
+    return normalizedNickname;
+}
 
 // 저장된 출발 위치 목록은 현재 사용자 소유 데이터만 preset 우선 순서로 반환한다.
 export const GET = createProtectedRoute(async (request, { currentUserId }) => {
@@ -39,13 +67,32 @@ export const POST = createProtectedRoute(async (request, { currentUserId }) => {
     try {
         const body = await request.json();
         const label = validateDepartureLabel(body.label);
+        const address = validateDepartureAddress(body.address);
         const { lat, lng } = validateCoordinates(body.lat, body.lng);
         const locationKind = validateLocationKind(body.locationKind);
+        const ownerParty = body.ownerParty === undefined ? "me" : validateDepartureOwnerParty(body.ownerParty);
+        let friendId: string | null = null;
+        let friendNickname: string | null = null;
+
+        if (ownerParty === "friend") {
+            friendId = validateUuid(body.friendId, "friendId");
+            friendNickname = validateFriendNickname(body.friendNickname);
+            const hasRelation = await hasFriendRelation(currentUserId, friendId);
+
+            if (!hasRelation) {
+                return apiError("FORBIDDEN_RELATION", "친구 관계가 없는 대상 저장 위치는 생성할 수 없습니다.", 403);
+            }
+        }
+
         const departure = await createDepartureLocation({
             userId: currentUserId,
             label,
+            address,
             lat,
             lng,
+            ownerParty,
+            friendId,
+            friendNickname,
             locationKind,
         });
 
@@ -69,13 +116,37 @@ export const PATCH = createProtectedRoute(async (request, { currentUserId }) => 
         const body = await request.json();
         const departureLocationId = validateUuid(body.departureLocationId, "departureLocationId");
         const label = validateDepartureLabel(body.label);
+        const address = validateDepartureAddress(body.address);
         const { lat, lng } = validateCoordinates(body.lat, body.lng);
+        const ownerParty = body.ownerParty === undefined ? undefined : validateDepartureOwnerParty(body.ownerParty);
+        let friendId: string | null | undefined;
+        let friendNickname: string | null | undefined;
+
+        if (ownerParty === "friend") {
+            friendId = validateUuid(body.friendId, "friendId");
+            friendNickname = validateFriendNickname(body.friendNickname);
+            const hasRelation = await hasFriendRelation(currentUserId, friendId);
+
+            if (!hasRelation) {
+                return apiError("FORBIDDEN_RELATION", "친구 관계가 없는 대상 저장 위치는 수정할 수 없습니다.", 403);
+            }
+        }
+
+        if (ownerParty === "me") {
+            friendId = null;
+            friendNickname = null;
+        }
+
         const departure = await updateDepartureLocation({
             userId: currentUserId,
             departureLocationId,
             label,
+            address,
             lat,
             lng,
+            ownerParty,
+            friendId,
+            friendNickname,
         });
 
         if (!departure) {

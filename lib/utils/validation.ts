@@ -168,6 +168,25 @@ export function validateDepartureLabel(value: unknown) {
     return label;
 }
 
+// 저장 위치 address 는 공백 제거 후 255자 이하 문자열만 허용한다.
+export function validateDepartureAddress(value: unknown) {
+    if (typeof value !== "string") {
+        throw new InputValidationError("address는 문자열이어야 합니다.");
+    }
+
+    const normalizedAddress = value.trim().replace(/\s+/g, " ");
+
+    if (!normalizedAddress) {
+        throw new InputValidationError("address를 입력해 주세요.");
+    }
+
+    if (normalizedAddress.length > 255) {
+        throw new InputValidationError("address는 255자 이하만 허용합니다.");
+    }
+
+    return normalizedAddress;
+}
+
 // locationKind 는 recent/preset 두 값만 허용한다.
 export function validateLocationKind(value: unknown) {
     if (typeof value !== "string" || !LOCATION_KIND_VALUES.includes(value as (typeof LOCATION_KIND_VALUES)[number])) {

@@ -3,26 +3,37 @@ import { useEffect, useRef, useState } from "react";
 
 import type { KakaoMapInstance, KakaoMarkerInstance } from "@/lib/kakao/map-loader";
 import { loadKakaoMapSdk } from "@/lib/kakao/map-loader";
-import { createPersonMarkerImage } from "./recommendation/map/kakao-marker-icons";
-import type { DepartureParty, ResolvedLocation } from "./types";
+import { createPersonMarkerImage } from "../recommendation/map/kakao-marker-icons";
+import type { DepartureParty, ResolvedLocation } from "../types";
 
 export type PendingPinSelection = {
+    // 현재 선택된 위치의 주소입니다.
     address: string;
+    // 현재 선택된 위치의 위도입니다.
     latitude: number;
+    // 현재 선택된 위치의 경도입니다.
     longitude: number;
 };
 
 export type PinSearchResult = {
+    // 검색 결과 항목의 고유 키입니다.
     id: string;
+    // 검색 결과 주소 문자열입니다.
     address: string;
+    // 검색 결과 위도입니다.
     latitude: number;
+    // 검색 결과 경도입니다.
     longitude: number;
 };
 
 type PinMapObjects = {
+    // 로드된 카카오 SDK 객체입니다.
     sdk: Awaited<ReturnType<typeof loadKakaoMapSdk>>;
+    // 실제 지도 인스턴스입니다.
     map: KakaoMapInstance;
+    // 선택 위치를 표시할 마커 인스턴스입니다.
     marker: KakaoMarkerInstance;
+    // 주소 검색과 역지오코딩을 담당하는 geocoder입니다.
     geocoder: {
         addressSearch: (
             addr: string,
@@ -48,15 +59,31 @@ type PinMapObjects = {
 };
 
 type SearchAddressResult =
-    | { status: "ok"; results: PinSearchResult[] }
-    | { status: "error"; message: string };
+    | {
+        // 검색이 성공했음을 나타냅니다.
+        status: "ok";
+        // 화면에 노출할 검색 결과 목록입니다.
+        results: PinSearchResult[];
+    }
+    | {
+        // 검색이 실패했음을 나타냅니다.
+        status: "error";
+        // 사용자에게 보여줄 오류 문구입니다.
+        message: string;
+    };
 
 type UseChatPinPickerMapArgs = {
+    // 내 출발지인지 친구 출발지인지 나타냅니다.
     party: DepartureParty;
+    // 수정 모드에서 처음 로드할 위치값입니다.
     initialLocation: ResolvedLocation | null;
+    // 주소 검색 결과 최대 노출 개수입니다.
     searchResultLimit: number;
+    // 사용자가 검색창에 직접 상호작용했는지 추적하는 ref입니다.
     hasUserInteractedWithSearchRef: MutableRefObject<boolean>;
+    // 초기 위치를 검색창 문자열로 동기화할 때 호출합니다.
     onSearchQueryHydrated: (nextAddress: string) => void;
+    // 검색/선택 상태 안내 문구를 바꿀 때 호출합니다.
     onSearchFeedbackChange: (message: string) => void;
 };
 
