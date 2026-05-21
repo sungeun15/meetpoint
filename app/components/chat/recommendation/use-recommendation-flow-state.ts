@@ -64,7 +64,7 @@ export function useRecommendationFlowState({
     const [departureInputMethod, setDepartureInputMethod] = useState<DepartureInputMethod>("search");
     const [departureSearchQueries, setDepartureSearchQueries] = useState<Record<DepartureParty, string>>({
         me: "",
-        friend: "강남역",
+        friend: "",
     });
     const [selectedSavedDepartureIds, setSelectedSavedDepartureIds] = useState<Record<DepartureParty, string>>({ me: "", friend: "" });
     const [pinnedDepartureLabels, setPinnedDepartureLabels] = useState<Record<DepartureParty, string>>({
