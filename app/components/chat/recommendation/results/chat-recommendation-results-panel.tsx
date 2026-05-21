@@ -10,7 +10,7 @@ import { RecommendationModeBadge } from "../chat-recommendation-shared";
 import { ChatSectionCard } from "../../chat-ui";
 import type { MeetingMode, RecommendationCard, RecommendationSummary } from "../../types";
 
-type ChatRecommendationResultsPanelProps = {
+export type ChatRecommendationResultsPanelProps = {
     meetingMode: MeetingMode; // 지금 만나기/나중에 만나기 중 어떤 추천 시나리오인지 나타냅니다.
     recommendationSummary: RecommendationSummary; // 결과 상단 배지와 요약 카드에 사용할 요약 데이터입니다.
     hasRecommendations: boolean; // 실제 추천 결과가 준비되어 본문을 렌더할 수 있는지 나타냅니다.

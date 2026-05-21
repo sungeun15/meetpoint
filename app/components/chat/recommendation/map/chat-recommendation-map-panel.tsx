@@ -6,7 +6,7 @@ import { RecommendationModeBadge } from "../chat-recommendation-shared";
 import { ChatSectionCard } from "../../chat-ui";
 import type { MapMarker, RecommendationSummary } from "../../types";
 
-type ChatRecommendationMapPanelProps = {
+export type ChatRecommendationMapPanelProps = {
     recommendationSummary: RecommendationSummary; // 현재 추천 모드와 요약 라벨 묶음입니다.
     hasRecommendations: boolean; // 실제 추천 결과가 준비된 상태인지 나타냅니다.
     mapMarkers: MapMarker[]; // 지도와 칩 목록에 함께 반영할 전체 마커 배열입니다.
