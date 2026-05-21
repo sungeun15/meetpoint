@@ -1,14 +1,18 @@
 import { useEffect, useRef, useState } from "react";
 
 import { loadKakaoMapSdk } from "@/lib/kakao/map-loader";
-import { friendsBodyFont } from "../friends/fonts";
-import { ModalShell } from "../shared/modal-shell";
-import type { ResolvedLocation } from "./types";
+import { friendsBodyFont } from "../../friends/fonts";
+import { ModalShell } from "../../shared/modal-shell";
+import type { ResolvedLocation } from "../types";
 
 type ChatLocationMapLayerProps = {
+    // 모달 상단 제목으로 쓸 문구입니다.
     title: string;
+    // 모달 상단 설명 문구입니다.
     description: string;
+    // 지도에 표시할 위치 정보입니다.
     location: ResolvedLocation;
+    // 모달을 닫습니다.
     onClose: () => void;
 };
 

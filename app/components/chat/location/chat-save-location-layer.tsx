@@ -2,14 +2,19 @@
 
 import { useState } from "react";
 
-import { ModalShell } from "../shared/modal-shell";
-import { friendsBodyFont, friendsDisplayFont, friendsHeadingFont } from "../friends/fonts";
+import { ModalShell } from "../../shared/modal-shell";
+import { friendsBodyFont, friendsDisplayFont, friendsHeadingFont } from "../../friends/fonts";
 
 type ChatSaveLocationLayerProps = {
+    // 모달 상단 제목입니다.
     title: string;
+    // 현재 저장 원천을 설명하는 라벨입니다.
     sourceLabel: string;
+    // 저장 전에 보여줄 위치 미리보기 문자열입니다.
     previewValue: string;
+    // 모달을 닫습니다.
     onClose: () => void;
+    // 사용자가 입력한 저장 제목으로 저장을 확정합니다.
     onConfirm: (nextTitle: string) => void;
 };
 
