@@ -140,6 +140,7 @@ export function ChatLocationStatusPanel({
                                             "내 위치",
                                             "현재 위치를 팝업 레이어 안에서 바로 확인합니다.",
                                             myResolvedLocation,
+                                            "me",
                                         );
                                     }}
                                     className={`${friendsHeadingFont.className} min-h-9 w-full rounded-xl px-3 py-1.5 text-[12px] font-bold sm:min-h-11 sm:px-3.5 sm:py-2 sm:text-[14px]`}
@@ -189,6 +190,7 @@ export function ChatLocationStatusPanel({
                                             "친구 위치",
                                             "현재 위치를 팝업 레이어 안에서 바로 확인합니다.",
                                             friendResolvedLocation,
+                                            "friend",
                                         );
                                     }}
                                     className={`${friendsHeadingFont.className} min-h-9 w-full rounded-xl px-3 py-1.5 text-[12px] font-bold sm:min-h-11 sm:px-3.5 sm:py-2 sm:text-[14px]`}
