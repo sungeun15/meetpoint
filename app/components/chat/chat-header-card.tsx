@@ -4,14 +4,19 @@ import { friendsBodyFont, friendsDisplayFont, friendsHeadingFont } from "../frie
 import type { FriendItem } from "../friends/types";
 import { FriendInitialAvatar } from "../shared/friend-initial-avatar";
 import { ChatActionButton, ChatSectionCard } from "./chat-ui";
-import type { ResolvedLocation } from "./types";
+import type { LocationMapMarkerVariant, ResolvedLocation } from "./types";
 
 type ChatHeaderCardProps = {
     selectedFriend: FriendItem;
     lastSharedAt: string | null;
     friendResolvedLocation: ResolvedLocation | null;
     selectedFriendDepartureLocation: ResolvedLocation | null;
-    onOpenLocationMap: (title: string, description: string, location: ResolvedLocation | null) => void;
+    onOpenLocationMap: (
+        title: string,
+        description: string,
+        location: ResolvedLocation | null,
+        markerVariant?: LocationMapMarkerVariant,
+    ) => void;
 };
 
 export function ChatHeaderCard({
@@ -23,6 +28,7 @@ export function ChatHeaderCard({
 }: ChatHeaderCardProps) {
     const [isMobileHeaderCollapsed, setIsMobileHeaderCollapsed] = useState(true);
     const [feedbackMessage, setFeedbackMessage] = useState<string | null>(null);
+    const headerActionButtonClassName = `${friendsDisplayFont.className} min-h-9 w-full rounded-[12px] px-2.5 py-1.5 text-[12px] sm:min-h-[42px] sm:px-4 sm:py-2 sm:text-[14px] lg:text-[16px]`;
 
     useEffect(() => {
         if (!feedbackMessage) return;
@@ -33,6 +39,34 @@ export function ChatHeaderCard({
 
         return () => clearTimeout(timeoutId);
     }, [feedbackMessage]);
+
+    function handleOpenFriendLocationMap() {
+        if (!friendResolvedLocation) {
+            setFeedbackMessage("친구가 아직 위치를 공유하지 않았어요.");
+            return;
+        }
+
+        onOpenLocationMap(
+            `${selectedFriend.nickname} 위치`,
+            "현재 대화 중인 친구의 공유 위치를 팝업 레이어 안에서 바로 확인합니다.",
+            friendResolvedLocation,
+            "friend",
+        );
+    }
+
+    function handleOpenSavedFriendLocationMap() {
+        if (!selectedFriendDepartureLocation) {
+            setFeedbackMessage("저장된 친구 위치가 없어요.");
+            return;
+        }
+
+        onOpenLocationMap(
+            `${selectedFriend.nickname} 저장 위치`,
+            `현재 선택된 저장 친구 위치인 ${selectedFriendDepartureLocation.label} 를 팝업 레이어 안에서 바로 확인합니다.`,
+            selectedFriendDepartureLocation,
+            "friend",
+        );
+    }
 
     return (
         <ChatSectionCard className="px-3 py-3 sm:px-5 sm:py-4 lg:px-8 lg:py-6">
@@ -73,38 +107,19 @@ export function ChatHeaderCard({
                 <div className="grid w-full gap-2 sm:w-auto xl:min-w-58 xl:shrink-0">
                     <ChatActionButton
                         variant="outline"
-                        onClick={() => {
-                            if (!friendResolvedLocation) {
-                                setFeedbackMessage("친구가 아직 위치를 공유하지 않았어요.");
-                                return;
-                            }
-
-                            onOpenLocationMap(
-                                `${selectedFriend.nickname} 위치`,
-                                "현재 대화 중인 친구의 공유 위치를 팝업 레이어 안에서 바로 확인합니다.",
-                                friendResolvedLocation,
-                            );
-                        }}
-                        className={`${friendsDisplayFont.className} min-h-10 w-full rounded-[12px] px-3 py-1.5 text-[13px] sm:min-h-[46px] sm:px-5 sm:py-2.5 sm:text-[16px] lg:text-[18px]`}
+                        onClick={handleOpenFriendLocationMap}
+                        className={headerActionButtonClassName}
                     >
                         친구 현재 위치 확인
                     </ChatActionButton>
 
-                    {selectedFriendDepartureLocation ? (
-                        <ChatActionButton
-                            variant="outline"
-                            onClick={() => {
-                                onOpenLocationMap(
-                                    `${selectedFriend.nickname} 저장 위치`,
-                                    `현재 선택된 저장 친구 위치인 ${selectedFriendDepartureLocation.label} 를 팝업 레이어 안에서 바로 확인합니다.`,
-                                    selectedFriendDepartureLocation,
-                                );
-                            }}
-                            className={`${friendsDisplayFont.className} min-h-10 w-full rounded-[12px] px-3 py-1.5 text-[13px] sm:min-h-[46px] sm:px-5 sm:py-2.5 sm:text-[16px] lg:text-[18px]`}
-                        >
-                            저장된 친구 위치 확인
-                        </ChatActionButton>
-                    ) : null}
+                    <ChatActionButton
+                        variant="outline"
+                        onClick={handleOpenSavedFriendLocationMap}
+                        className={headerActionButtonClassName}
+                    >
+                        저장된 친구 위치 확인
+                    </ChatActionButton>
                 </div>
             </div>
 

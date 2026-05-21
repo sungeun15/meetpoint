@@ -314,6 +314,7 @@ export function ChatScreen({ requestedFriendId = null }: ChatScreenProps) {
                         title={activeLocationMap.title}
                         description={activeLocationMap.description}
                         location={activeLocationMap.location}
+                        markerVariant={activeLocationMap.markerVariant}
                         onClose={handleCloseLocationMap}
                     />
                 ) : null}

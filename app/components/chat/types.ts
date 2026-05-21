@@ -41,6 +41,8 @@ export type ResolvedLocation = LocationPoint & {
     label: string;
 };
 
+export type LocationMapMarkerVariant = "default" | "me" | "friend";
+
 export type MapMarker = LocationPoint & {
     id: string;
     label: string;

@@ -3,7 +3,7 @@ import { useState } from "react";
 import type { LocationShareScope } from "@/lib/contracts/friends";
 
 import type { FriendItem } from "../../friends/types";
-import type { DepartureParty, ResolvedLocation } from "../types";
+import type { DepartureParty, LocationMapMarkerVariant, ResolvedLocation } from "../types";
 
 export type PendingLocationSave = {
     party: DepartureParty; // 어느 참여자의 위치를 저장하는지 나타냅니다.
@@ -24,6 +24,7 @@ export type ActiveLocationMap = {
     title: string; // 지도 모달 제목입니다.
     description: string; // 지도 모달 설명 문구입니다.
     location: ResolvedLocation; // 지도에서 강조할 실제 위치입니다.
+    markerVariant: LocationMapMarkerVariant; // 팝업 레이어에 표시할 마커 스타일입니다.
 };
 
 type UseChatScreenLocationOverlaysArgs = {
@@ -103,12 +104,17 @@ export function useChatScreenLocationOverlays({
         setPendingManualShare(null);
     }
 
-    function handleOpenLocationMap(title: string, description: string, location: ResolvedLocation | null) {
+    function handleOpenLocationMap(
+        title: string,
+        description: string,
+        location: ResolvedLocation | null,
+        markerVariant: LocationMapMarkerVariant = "default",
+    ) {
         if (!location) {
             return;
         }
 
-        setActiveLocationMap({ title, description, location });
+        setActiveLocationMap({ title, description, location, markerVariant });
     }
 
     function handleCloseLocationMap() {
