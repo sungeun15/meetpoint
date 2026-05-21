@@ -17,7 +17,6 @@ const navigationItems = [
 
 const inAppNavigationItems = [
   { href: "/friends", label: "Friends" },
-  { href: "/chat", label: "Chat" },
 ];
 
 type HeaderConfig = {

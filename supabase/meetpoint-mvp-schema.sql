@@ -90,6 +90,7 @@ create table
         friend_id uuid null, -- 친구 출발지용일 때 대상 친구 id
         friend_nickname varchar(100) null, -- 친구 출발지용일 때 대상 친구 닉네임 스냅샷
         location_kind varchar(20) not null default 'recent', -- 최근 위치인지 프리셋인지 구분
+        is_selected boolean not null default false, -- 현재 그룹에서 선택된 저장 위치인지 여부
         last_used_at timestamptz not null default now (), -- 마지막 사용 시각
         created_at timestamptz not null default now (), -- 저장 위치 생성 시각
         updated_at timestamptz not null default now (), -- 저장 위치 수정 시각
@@ -115,6 +116,9 @@ alter table public.departure_locations
 
 alter table public.departure_locations
     add column if not exists address text null;
+
+alter table public.departure_locations
+    add column if not exists is_selected boolean not null default false;
 
 -- 기존 row 마이그레이션: owner/friend 메타를 제약 조건 기준으로 정규화한다.
 update public.departure_locations
@@ -148,6 +152,20 @@ where owner_party = 'friend'
         or friend_nickname is null
         or btrim(friend_nickname) = ''
     );
+
+with ranked_departure_locations as (
+    select
+        id,
+        row_number() over (
+            partition by user_id, owner_party, coalesce(friend_id, user_id)
+            order by location_kind asc, last_used_at desc, created_at desc
+        ) as selection_rank
+    from public.departure_locations
+)
+update public.departure_locations as departure
+set is_selected = ranked_departure_locations.selection_rank = 1
+from ranked_departure_locations
+where departure.id = ranked_departure_locations.id;
 
 do $$
 begin
@@ -210,6 +228,8 @@ create index if not exists departure_locations_user_kind_idx on public.departure
 
 create index if not exists departure_locations_user_friend_idx on public.departure_locations (user_id, owner_party, friend_id, last_used_at desc);
 
+create index if not exists departure_locations_user_selected_idx on public.departure_locations (user_id, owner_party, friend_id, is_selected);
+
 create or replace function public.accept_friend_request_atomic(
         input_request_id uuid,
         input_current_user_id uuid
@@ -246,5 +266,44 @@ begin
         requester_id := pending_request.user_id;
 
         return next;
+end;
+$$;
+
+create or replace function public.remove_friend_relation_atomic(
+    input_user_id uuid,
+    input_friend_user_id uuid
+)
+returns boolean
+language plpgsql
+as $$
+declare
+    has_relation boolean;
+begin
+    -- 메시지 삭제와 친구 관계 삭제를 한 함수에서 묶어 중간 실패 시 부분 삭제를 막는다.
+    select exists(
+        select 1
+        from public.friends
+        where status = 'accepted'
+            and (
+            (user_id = input_user_id and friend_id = input_friend_user_id)
+            or (user_id = input_friend_user_id and friend_id = input_user_id)
+            )
+    )
+    into has_relation;
+
+    if not has_relation then
+        return false;
+    end if;
+
+    delete from public.messages
+    where (sender_id = input_user_id and receiver_id = input_friend_user_id)
+        or (sender_id = input_friend_user_id and receiver_id = input_user_id);
+
+    delete from public.friends
+    where status = 'accepted'
+        and user_id in (input_user_id, input_friend_user_id)
+        and friend_id in (input_user_id, input_friend_user_id);
+
+    return true;
 end;
 $$;

@@ -12,6 +12,7 @@ type DepartureLocationRow = {
     friend_id: string | null;
     friend_nickname: string | null;
     location_kind: "recent" | "preset";
+    is_selected: boolean;
     last_used_at: string;
     created_at: string;
     updated_at: string;
@@ -38,9 +39,15 @@ export type SavedDepartureLocation = {
     friendId: string | null;
     friendNickname: string | null;
     locationKind: "recent" | "preset";
+    isSelected: boolean;
     lastUsedAt: string;
     createdAt: string;
     updatedAt: string;
+};
+
+type DepartureSelectionScope = {
+    ownerParty: "me" | "friend";
+    friendId: string | null;
 };
 
 function normalizeDepartureAddress(address: string | null | undefined) {
@@ -58,6 +65,7 @@ function mapDepartureLocationRow(row: DepartureLocationRow): SavedDepartureLocat
         friendId: row.friend_id,
         friendNickname: row.friend_nickname,
         locationKind: row.location_kind,
+        isSelected: row.is_selected,
         lastUsedAt: row.last_used_at,
         createdAt: row.created_at,
         updatedAt: row.updated_at,
@@ -82,6 +90,7 @@ function mapLegacyDepartureLocationRow(
         friendId: owner.friendId,
         friendNickname: owner.friendNickname,
         locationKind: row.location_kind,
+        isSelected: false,
         lastUsedAt: row.last_used_at,
         createdAt: row.created_at,
         updatedAt: row.updated_at,
@@ -96,7 +105,77 @@ function hasOwnerMetadataColumnError(error: unknown) {
     return errorMessage.includes("owner_party")
         || errorMessage.includes("friend_id")
         || errorMessage.includes("friend_nickname")
+        || errorMessage.includes("is_selected")
         || (errorMessage.includes("address") && errorMessage.includes("departure_locations"));
+}
+
+async function clearSelectedDepartureLocations(args: {
+    userId: string;
+    ownerParty: "me" | "friend";
+    friendId: string | null;
+    excludedDepartureLocationId?: string;
+}) {
+    // 같은 사용자/owner/friend 범위의 기존 선택을 먼저 해제해 한 그룹에 하나만 선택되게 유지합니다.
+    let query = getSupabaseAdminClient()
+        .from("departure_locations")
+        .update({ is_selected: false })
+        .eq("user_id", args.userId)
+        .eq("owner_party", args.ownerParty)
+        .eq("is_selected", true);
+
+    if (args.ownerParty === "friend") {
+        query = query.eq("friend_id", args.friendId);
+    } else {
+        query = query.is("friend_id", null);
+    }
+
+    if (args.excludedDepartureLocationId) {
+        query = query.neq("id", args.excludedDepartureLocationId);
+    }
+
+    return await query.select("id").returns<Array<{ id: string }>>();
+}
+
+async function selectDepartureLocationWithinScope(args: {
+    userId: string;
+    departureLocationId: string;
+    selectionScope: DepartureSelectionScope;
+    touchLastUsedAt?: boolean;
+}) {
+    // 저장 위치 선택과 최근 사용 시각 갱신을 같은 scope 안에서 함께 처리합니다.
+    const nextTimestamp = new Date().toISOString();
+    const clearSelectionResult = await clearSelectedDepartureLocations({
+        userId: args.userId,
+        ownerParty: args.selectionScope.ownerParty,
+        friendId: args.selectionScope.friendId,
+        excludedDepartureLocationId: args.departureLocationId,
+    });
+
+    if (clearSelectionResult.error) {
+        return {
+            data: null,
+            error: clearSelectionResult.error,
+        };
+    }
+
+    const updatePayload = args.touchLastUsedAt
+        ? {
+            is_selected: true,
+            last_used_at: nextTimestamp,
+            updated_at: nextTimestamp,
+        }
+        : {
+            is_selected: true,
+            updated_at: nextTimestamp,
+        };
+
+    return await getSupabaseAdminClient()
+        .from("departure_locations")
+        .update(updatePayload)
+        .eq("user_id", args.userId)
+        .eq("id", args.departureLocationId)
+        .select("id, label, address, lat, lng, owner_party, friend_id, friend_nickname, location_kind, is_selected, last_used_at, created_at, updated_at")
+        .maybeSingle<DepartureLocationRow>();
 }
 
 function sortDepartureRowsByLocationKind<T extends { location_kind: "recent" | "preset" }>(rows: T[]) {
@@ -147,7 +226,7 @@ export async function listSavedDepartureLocations(userId: string, limit: number)
     return runWithOwnerMetadataFallback({
         latestQuery: async () => await getSupabaseAdminClient()
             .from("departure_locations")
-            .select("id, label, address, lat, lng, owner_party, friend_id, friend_nickname, location_kind, last_used_at, created_at, updated_at")
+            .select("id, label, address, lat, lng, owner_party, friend_id, friend_nickname, location_kind, is_selected, last_used_at, created_at, updated_at")
             .eq("user_id", userId)
             .order("location_kind", { ascending: true })
             .order("last_used_at", { ascending: false })
@@ -181,21 +260,37 @@ export async function createDepartureLocation(input: {
     locationKind: "recent" | "preset";
 }) {
     return runWithOwnerMetadataFallback({
-        latestQuery: async () => await getSupabaseAdminClient()
-            .from("departure_locations")
-            .insert({
-                user_id: input.userId,
-                label: input.label,
-                address: input.address,
-                lat: input.lat,
-                lng: input.lng,
-                owner_party: input.ownerParty,
-                friend_id: input.friendId,
-                friend_nickname: input.friendNickname,
-                location_kind: input.locationKind,
-            })
-            .select("id, label, address, lat, lng, owner_party, friend_id, friend_nickname, location_kind, last_used_at, created_at, updated_at")
-            .single<DepartureLocationRow>(),
+        latestQuery: async () => {
+            const clearSelectionResult = await clearSelectedDepartureLocations({
+                userId: input.userId,
+                ownerParty: input.ownerParty,
+                friendId: input.friendId,
+            });
+
+            if (clearSelectionResult.error) {
+                return {
+                    data: null,
+                    error: clearSelectionResult.error,
+                };
+            }
+
+            return await getSupabaseAdminClient()
+                .from("departure_locations")
+                .insert({
+                    user_id: input.userId,
+                    label: input.label,
+                    address: input.address,
+                    lat: input.lat,
+                    lng: input.lng,
+                    owner_party: input.ownerParty,
+                    friend_id: input.friendId,
+                    friend_nickname: input.friendNickname,
+                    location_kind: input.locationKind,
+                    is_selected: true,
+                })
+                .select("id, label, address, lat, lng, owner_party, friend_id, friend_nickname, location_kind, is_selected, last_used_at, created_at, updated_at")
+                .single<DepartureLocationRow>();
+        },
         legacyQuery: async () => await getSupabaseAdminClient()
             .from("departure_locations")
             .insert({
@@ -267,7 +362,7 @@ export async function updateDepartureLocation(input: {
             .update(updatePayload)
             .eq("user_id", input.userId)
             .eq("id", input.departureLocationId)
-            .select("id, label, address, lat, lng, owner_party, friend_id, friend_nickname, location_kind, last_used_at, created_at, updated_at")
+            .select("id, label, address, lat, lng, owner_party, friend_id, friend_nickname, location_kind, is_selected, last_used_at, created_at, updated_at")
             .maybeSingle<DepartureLocationRow>(),
         legacyQuery: async () => await getSupabaseAdminClient()
             .from("departure_locations")
@@ -290,23 +385,38 @@ export async function touchDepartureLocationLastUsedAt(input: {
     userId: string;
     departureLocationId: string;
 }) {
-    const nextTimestamp = new Date().toISOString();
-    const touchUpdatePayload = {
-        last_used_at: nextTimestamp,
-        updated_at: nextTimestamp,
-    };
-
     return runWithOwnerMetadataFallback({
-        latestQuery: async () => await getSupabaseAdminClient()
-            .from("departure_locations")
-            .update(touchUpdatePayload)
-            .eq("user_id", input.userId)
-            .eq("id", input.departureLocationId)
-            .select("id, label, address, lat, lng, owner_party, friend_id, friend_nickname, location_kind, last_used_at, created_at, updated_at")
-            .maybeSingle<DepartureLocationRow>(),
+        latestQuery: async () => {
+            const targetDepartureResult = await getSupabaseAdminClient()
+                .from("departure_locations")
+                .select("id, owner_party, friend_id")
+                .eq("user_id", input.userId)
+                .eq("id", input.departureLocationId)
+                .maybeSingle<Pick<DepartureLocationRow, "id" | "owner_party" | "friend_id">>();
+
+            if (targetDepartureResult.error || !targetDepartureResult.data) {
+                return {
+                    data: null,
+                    error: targetDepartureResult.error,
+                };
+            }
+
+            return await selectDepartureLocationWithinScope({
+                userId: input.userId,
+                departureLocationId: input.departureLocationId,
+                selectionScope: {
+                    ownerParty: targetDepartureResult.data.owner_party,
+                    friendId: targetDepartureResult.data.friend_id,
+                },
+                touchLastUsedAt: true,
+            });
+        },
         legacyQuery: async () => await getSupabaseAdminClient()
             .from("departure_locations")
-            .update(touchUpdatePayload)
+            .update({
+                last_used_at: new Date().toISOString(),
+                updated_at: new Date().toISOString(),
+            })
             .eq("user_id", input.userId)
             .eq("id", input.departureLocationId)
             .select("id, label, lat, lng, location_kind, last_used_at, created_at, updated_at")

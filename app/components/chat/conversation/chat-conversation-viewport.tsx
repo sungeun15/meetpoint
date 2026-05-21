@@ -1,7 +1,12 @@
+import { useState, type ReactNode } from "react";
+
 import { friendsBodyFont, friendsDisplayFont, friendsHeadingFont } from "../../friends/fonts";
 import { FriendInitialAvatar } from "../../shared/friend-initial-avatar";
 import type { ChatMessage } from "../types";
 import { buildConversationRows } from "./chat-conversation-rows";
+
+const URL_PATTERN = /(https?:\/\/[^\s]+|www\.[^\s]+)/gi;
+const IMAGE_URL_PATTERN = /\.(png|jpe?g|gif|webp|avif|bmp|svg)(?:\?.*)?$/i;
 
 // 대화 viewport 전체를 그리기 위해 필요한 상위 입력값입니다.
 type ChatConversationViewportProps = {
@@ -39,12 +44,134 @@ const MESSAGE_META_STACK_CLASS_NAME = "flex shrink-0 flex-col items-end gap-0.5 
 const MESSAGE_UNREAD_CLASS_NAME = `${friendsHeadingFont.className} shrink-0 text-[10px] leading-none text-[#f59e0b] sm:text-[11px]`;
 const MESSAGE_TIME_CLASS_NAME = `${friendsBodyFont.className} shrink-0 translate-y-0.5 text-[9px] leading-none text-[#a5acbb] sm:text-[10px] lg:text-[11px]`;
 
+function splitTrailingPunctuation(rawUrl: string) {
+    const match = rawUrl.match(/^(.*?)([.,!?)]*)$/);
+
+    if (!match) {
+        return { url: rawUrl, trailingText: "" };
+    }
+
+    return {
+        url: match[1] || rawUrl,
+        trailingText: match[2] ?? "",
+    };
+}
+
+function buildExternalHref(url: string) {
+    return url.startsWith("www.") ? `https://${url}` : url;
+}
+
+function isImageUrl(url: string) {
+    return IMAGE_URL_PATTERN.test(url);
+}
+
+function isStandaloneImageMessage(text: string) {
+    const trimmedText = text.trim();
+
+    if (!trimmedText) {
+        return false;
+    }
+
+    const matches = [...trimmedText.matchAll(URL_PATTERN)];
+
+    if (matches.length !== 1) {
+        return false;
+    }
+
+    const matchedUrl = matches[0]?.[0] ?? "";
+    return matchedUrl === trimmedText && isImageUrl(matchedUrl);
+}
+
+type ChatMessageExternalLinkProps = {
+    url: string;
+    isMine: boolean;
+};
+
+function ChatMessageExternalLink({ url, isMine }: ChatMessageExternalLinkProps) {
+    const [hasImageError, setHasImageError] = useState(false);
+    const href = buildExternalHref(url);
+
+    if (isImageUrl(url) && !hasImageError) {
+        return (
+            <a
+                href={href}
+                target="_blank"
+                rel="noopener noreferrer"
+                className={`mt-1 block overflow-hidden rounded-[12px] border border-[0.5px] ${isMine ? "border-white/35 bg-white/10" : "border-[#d7d9ff] bg-white/80"}`}
+            >
+                {/* 채팅 링크는 임의 외부 URL 이라 next/image remotePatterns 로 미리 제한하기 어렵습니다. */}
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                    src={href}
+                    alt="채팅에서 공유한 이미지 미리보기"
+                    loading="lazy"
+                    onError={() => setHasImageError(true)}
+                    className="block max-h-52 w-auto max-w-full object-cover"
+                />
+            </a>
+        );
+    }
+
+    return (
+        <a
+            href={href}
+            target="_blank"
+            rel="noopener noreferrer"
+            className={`break-all underline underline-offset-2 ${isMine ? "text-white" : "text-[#4338ca]"}`}
+        >
+            {url}
+        </a>
+    );
+}
+
+function renderMessageText(text: string, isMine: boolean) {
+    const matches = [...text.matchAll(URL_PATTERN)];
+
+    if (!matches.length) {
+        return text;
+    }
+
+    const segments: Array<string | ReactNode> = [];
+    let currentIndex = 0;
+
+    for (const match of matches) {
+        const rawUrl = match[0];
+        const startIndex = match.index ?? 0;
+
+        if (currentIndex < startIndex) {
+            segments.push(text.slice(currentIndex, startIndex));
+        }
+
+        const { url, trailingText } = splitTrailingPunctuation(rawUrl);
+
+        segments.push(<ChatMessageExternalLink key={`${url}-${startIndex}`} url={url} isMine={isMine} />);
+
+        if (trailingText) {
+            segments.push(trailingText);
+        }
+
+        currentIndex = startIndex + rawUrl.length;
+    }
+
+    if (currentIndex < text.length) {
+        segments.push(text.slice(currentIndex));
+    }
+
+    return segments;
+}
+
 function ChatMessageItem({ message, friendName, showName, showTime, showUnreadIndicator, isGroupStart, isGroupEnd }: ChatMessageItemProps) {
     const isMine = message.sender === "me";
+    const isStandaloneImage = isStandaloneImageMessage(message.text);
     // 같은 발신자의 연속 메시지는 위아래 모서리를 살짝 열어 하나의 묶음처럼 보이게 합니다.
     const bubbleShapeClassName = isMine
         ? `${!isGroupStart ? "rounded-tr-[8px]" : ""} ${!isGroupEnd ? "rounded-br-[8px]" : ""}`
         : `${!isGroupStart ? "rounded-tl-[8px]" : ""} ${!isGroupEnd ? "rounded-bl-[8px]" : ""}`;
+    const bubbleToneClassName = isStandaloneImage
+        ? "bg-transparent p-0 shadow-none"
+        : isMine
+            ? "bg-[#8378eb] text-[#fbfaff]"
+            : "bg-[#f0ecf8] text-[#273142]";
 
     return (
         <div className={`flex ${isMine ? "justify-end" : "justify-start"} ${isGroupStart ? "mt-3.5 sm:mt-4" : ""}`}>
@@ -82,12 +209,9 @@ function ChatMessageItem({ message, friendName, showName, showTime, showUnreadIn
                             </div>
                         ) : null}
                         <div
-                            className={`${MESSAGE_BUBBLE_BASE_CLASS_NAME} ${bubbleShapeClassName} ${isMine
-                                ? "bg-[#8378eb] text-[#fbfaff]"
-                                : "bg-[#f0ecf8] text-[#273142]"
-                                }`}
+                            className={`${MESSAGE_BUBBLE_BASE_CLASS_NAME} ${bubbleShapeClassName} ${bubbleToneClassName}`}
                         >
-                            {message.text}
+                            {renderMessageText(message.text, isMine)}
                         </div>
                         {!isMine && showTime ? (
                             <p className={MESSAGE_TIME_CLASS_NAME}>

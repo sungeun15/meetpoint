@@ -47,6 +47,7 @@ type ManualShareFallbackHandler = (scope: LocationShareScope) => void;
 type UseChatScreenLocationStateArgs = {
     activeFriendId: string; // 현재 대화 중인 친구 id 입니다.
     selectedFriend: FriendItem | null; // 상태 패널과 recommendation 에 사용할 현재 친구 정보입니다.
+    setShouldRedirectToLogin: Dispatch<SetStateAction<boolean>>;
     setFeedbackMessage: Dispatch<SetStateAction<string | null>>; // 상위 화면 피드백 문구를 갱신합니다.
 };
 
@@ -72,6 +73,7 @@ function commitSharedLocation(input: {
 export function useChatScreenLocationState({
     activeFriendId,
     selectedFriend,
+    setShouldRedirectToLogin,
     setFeedbackMessage,
 }: UseChatScreenLocationStateArgs) {
     const [mySharedLocation, setMySharedLocation] = useState<SharedLocationState | null>(null);
@@ -91,7 +93,7 @@ export function useChatScreenLocationState({
                 }
 
                 if (result.status === "unauthorized") {
-                    window.location.href = "/login";
+                    setShouldRedirectToLogin(true);
                     return;
                 }
 
@@ -122,7 +124,7 @@ export function useChatScreenLocationState({
         return () => {
             isMounted = false;
         };
-    }, []);
+    }, [setShouldRedirectToLogin]);
 
     const myLocationForSelectedFriend = useMemo(() => {
         if (!mySharedLocation) {
@@ -169,7 +171,7 @@ export function useChatScreenLocationState({
             });
 
             if (result.status === "unauthorized") {
-                window.location.href = "/login";
+                setShouldRedirectToLogin(true);
                 return false;
             }
 

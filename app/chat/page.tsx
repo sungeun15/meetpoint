@@ -18,6 +18,10 @@ export default async function ChatPage({ searchParams }: ChatPageProps) {
         ? resolvedSearchParams.friend[0] ?? null
         : resolvedSearchParams.friend ?? null;
 
+    if (!requestedFriendId) {
+        redirect("/friends");
+    }
+
     return (
         <main className="flex-1 overflow-x-hidden bg-white">
             <ChatScreen requestedFriendId={requestedFriendId} />

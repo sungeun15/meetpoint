@@ -1,9 +1,10 @@
 import { useEffect, useRef, useState } from "react";
 
 import { loadKakaoMapSdk } from "@/lib/kakao/map-loader";
+import { createPersonMarkerImage } from "../recommendation/map/kakao-marker-icons";
 import { friendsBodyFont } from "../../friends/fonts";
 import { ModalShell } from "../../shared/modal-shell";
-import type { ResolvedLocation } from "../types";
+import type { LocationMapMarkerVariant, ResolvedLocation } from "../types";
 
 type ChatLocationMapLayerProps = {
     // 모달 상단 제목으로 쓸 문구입니다.
@@ -12,6 +13,8 @@ type ChatLocationMapLayerProps = {
     description: string;
     // 지도에 표시할 위치 정보입니다.
     location: ResolvedLocation;
+    // 팝업 레이어에서 사용할 마커 스타일입니다.
+    markerVariant?: LocationMapMarkerVariant;
     // 모달을 닫습니다.
     onClose: () => void;
 };
@@ -20,6 +23,7 @@ export function ChatLocationMapLayer({
     title,
     description,
     location,
+    markerVariant = "default",
     onClose,
 }: ChatLocationMapLayerProps) {
     const kakaoMapContainerRef = useRef<HTMLDivElement | null>(null);
@@ -50,9 +54,14 @@ export function ChatLocationMapLayer({
                 const zoomControl = new kakao.maps.ZoomControl();
                 map.addControl(zoomControl, kakao.maps.ControlPosition.RIGHT);
 
+                const markerImage = markerVariant === "default"
+                    ? null
+                    : createPersonMarkerImage(kakao, markerVariant);
+
                 new kakao.maps.Marker({
                     map,
                     position,
+                    ...(markerImage ? { image: markerImage } : {}),
                 });
             })
             .catch((error) => {
@@ -65,7 +74,7 @@ export function ChatLocationMapLayer({
             isDisposed = true;
             container.innerHTML = "";
         };
-    }, [location.address, location.latitude, location.longitude]);
+    }, [location.address, location.latitude, location.longitude, markerVariant]);
 
     return (
         <ModalShell

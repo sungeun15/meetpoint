@@ -84,6 +84,19 @@ export async function markMessagesAsReadForConversation(input: { currentUserId: 
     }
 }
 
+export async function deleteMessagesBetweenUsers(input: { currentUserId: string; friendId: string }) {
+    const { error } = await getSupabaseAdminClient()
+        .from("messages")
+        .delete()
+        .or(
+            `and(sender_id.eq.${input.currentUserId},receiver_id.eq.${input.friendId}),and(sender_id.eq.${input.friendId},receiver_id.eq.${input.currentUserId})`,
+        );
+
+    if (error) {
+        throw error;
+    }
+}
+
 // 발신 기준으로 가장 최근에 읽힌 내 메시지 한 건만 커서로 가져온다.
 export async function getLastReadOwnMessage(input: { currentUserId: string; friendId: string }) {
     const { data, error } = await getSupabaseAdminClient()

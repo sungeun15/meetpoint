@@ -414,6 +414,20 @@ export async function rejectFriendRequest(input: { requestId: string; currentUse
     };
 }
 
+export async function removeFriendRelation(input: { userId: string; friendUserId: string }) {
+    const { data, error } = await getSupabaseAdminClient()
+        .rpc("remove_friend_relation_atomic", {
+            input_user_id: input.userId,
+            input_friend_user_id: input.friendUserId,
+        });
+
+    if (error) {
+        throw error;
+    }
+
+    return data === true;
+}
+
 // 권한 검증은 현재 사용자 기준 accepted 단방향 관계 존재 여부만 확인하면 된다.
 export async function hasFriendRelation(userId: string, friendUserId: string) {
     const { data, error } = await getSupabaseAdminClient()

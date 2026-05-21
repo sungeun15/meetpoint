@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 
 import { friendsBodyFont, friendsDisplayFont, friendsHeadingFont } from "../../friends/fonts";
 import { ChatActionButton, ChatSectionCard } from "../chat-ui";
-import type { ResolvedLocation } from "../types";
+import type { LocationMapMarkerVariant, ResolvedLocation } from "../types";
 
 type ChatLocationStatusPanelProps = {
     // 내 위치 상태 요약 문구입니다.
@@ -24,7 +24,12 @@ type ChatLocationStatusPanelProps = {
     // 현재 해석된 친구 위치 정보입니다.
     friendResolvedLocation: ResolvedLocation | null;
     // 위치 맵 레이어를 엽니다.
-    onOpenLocationMap: (title: string, description: string, location: ResolvedLocation | null) => void;
+    onOpenLocationMap: (
+        title: string,
+        description: string,
+        location: ResolvedLocation | null,
+        markerVariant?: LocationMapMarkerVariant,
+    ) => void;
     // 현재 친구에게 위치 공유를 실행합니다.
     onShareLocationToFriend: () => void;
     // 친구 전체에게 위치 공유를 실행합니다.
@@ -135,6 +140,7 @@ export function ChatLocationStatusPanel({
                                             "내 위치",
                                             "현재 위치를 팝업 레이어 안에서 바로 확인합니다.",
                                             myResolvedLocation,
+                                            "me",
                                         );
                                     }}
                                     className={`${friendsHeadingFont.className} min-h-9 w-full rounded-xl px-3 py-1.5 text-[12px] font-bold sm:min-h-11 sm:px-3.5 sm:py-2 sm:text-[14px]`}
@@ -184,6 +190,7 @@ export function ChatLocationStatusPanel({
                                             "친구 위치",
                                             "현재 위치를 팝업 레이어 안에서 바로 확인합니다.",
                                             friendResolvedLocation,
+                                            "friend",
                                         );
                                     }}
                                     className={`${friendsHeadingFont.className} min-h-9 w-full rounded-xl px-3 py-1.5 text-[12px] font-bold sm:min-h-11 sm:px-3.5 sm:py-2 sm:text-[14px]`}

@@ -10,6 +10,7 @@ export type SavedDepartureApiItem = {
     friendId: string | null; // 친구 소유 출발지일 때 연결된 친구 id 입니다.
     friendNickname: string | null; // 목록 표시용 친구 닉네임입니다.
     locationKind: "recent" | "preset"; // 최근 선택인지 고정 저장인지 구분합니다.
+    isSelected: boolean; // 현재 그룹에서 선택된 저장 위치인지 나타냅니다.
     lastUsedAt: string; // 마지막 사용 시각입니다.
     createdAt: string; // 생성 시각입니다.
     updatedAt: string; // 마지막 수정 시각입니다.
@@ -65,6 +66,7 @@ export function mapSavedDepartureApiItem(item: SavedDepartureApiItem): SavedDepa
         friendId: item.friendId,
         friendNickname: item.friendNickname,
         locationKind: item.locationKind,
+        isSelected: item.isSelected,
         latitude: item.lat,
         longitude: item.lng,
     };

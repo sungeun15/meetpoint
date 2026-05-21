@@ -1,5 +1,6 @@
 "use client";
 
+import type { Dispatch, SetStateAction } from "react";
 import { useState } from "react";
 
 import { useChatScreenFriendsState } from "./screen-state/use-chat-screen-friends-state";
@@ -7,7 +8,10 @@ import { useChatScreenLocationState } from "./screen-state/use-chat-screen-locat
 import { useChatScreenMessageState } from "./screen-state/use-chat-screen-message-state";
 import { useRecommendationFlowState } from "./recommendation/use-recommendation-flow-state";
 
-export function useChatScreenState(requestedFriendId: string | null = null) {
+export function useChatScreenState(
+    requestedFriendId: string | null = null,
+    setShouldRedirectToLogin: Dispatch<SetStateAction<boolean>>,
+) {
     const [feedbackMessage, setFeedbackMessage] = useState<string | null>(null);
     const {
         friends,
@@ -19,8 +23,10 @@ export function useChatScreenState(requestedFriendId: string | null = null) {
         filteredFriends,
         selectedFriend,
         handleSelectFriend,
+        handleLeaveChatRoom,
     } = useChatScreenFriendsState({
         requestedFriendId,
+        setShouldRedirectToLogin,
         setFeedbackMessage,
     });
     const {
@@ -34,6 +40,7 @@ export function useChatScreenState(requestedFriendId: string | null = null) {
         handleLoadOlderMessages,
     } = useChatScreenMessageState({
         activeFriendId,
+        setShouldRedirectToLogin,
         setFeedbackMessage,
         setFriends,
     });
@@ -49,6 +56,7 @@ export function useChatScreenState(requestedFriendId: string | null = null) {
     } = useChatScreenLocationState({
         activeFriendId,
         selectedFriend,
+        setShouldRedirectToLogin,
         setFeedbackMessage,
     });
     const {
@@ -58,7 +66,7 @@ export function useChatScreenState(requestedFriendId: string | null = null) {
         departureSearchQueries,
         visibleSavedDepartures,
         selectedSavedDepartureIds,
-        selectedSavedDepartures,
+        selectedFriendDepartureLocation,
         selectedDepartureFriendId,
         departureFriendOptions,
         selectedDepartureLabels,
@@ -86,18 +94,9 @@ export function useChatScreenState(requestedFriendId: string | null = null) {
         mySharedLocation: myLocationForSelectedFriend,
         selectedFriend,
         availableFriends: friends,
+        setShouldRedirectToLogin,
         setFeedbackMessage,
     });
-    const selectedFriendDepartureLocation = meetingMode === "later"
-        && departureInputMethod === "saved"
-        && selectedSavedDepartures.friend
-        ? {
-            label: selectedSavedDepartures.friend.label,
-            address: selectedSavedDepartures.friend.address,
-            latitude: selectedSavedDepartures.friend.latitude,
-            longitude: selectedSavedDepartures.friend.longitude,
-        }
-        : null;
 
     return {
         isLoadingFriends, // 친구 목록을 아직 불러오는 중인지 나타냅니다.
@@ -122,7 +121,7 @@ export function useChatScreenState(requestedFriendId: string | null = null) {
         departureSearchQueries, // 참여자별 출발지 검색 입력값.
         visibleSavedDepartures, // 현재 필터 기준으로 보여 줄 저장 출발지 목록.
         selectedSavedDepartureIds, // 참여자별 현재 선택된 저장 출발지 id .
-        selectedFriendDepartureLocation, // 나중에 만나기에서 현재 선택된 친구 저장 출발 위치입니다.
+        selectedFriendDepartureLocation, // 헤더의 "저장된 친구 위치 확인" 버튼이 바로 사용할 친구 저장 위치입니다.
         selectedDepartureFriendId, // 친구 출발지 목록에 적용된 친구 필터 id .
         departureFriendOptions, // 친구 출발지 필터 드롭다운 옵션 목록.
         selectedDepartureLabels, // 추천 계산에 실제로 사용할 출발지 라벨.
@@ -134,6 +133,7 @@ export function useChatScreenState(requestedFriendId: string | null = null) {
         recommendationCards, // 추천 결과 카드 목록.
         mapMarkers, // 지도에 그릴 사람/중심점/장소 marker 목록.
         handleSelectFriend, // 현재 대화 친구를 바꾸는 handler .
+        handleLeaveChatRoom, // 현재 친구 채팅방에서 나가는 handler .
         handleDraftMessageChange, // 메시지 초안 입력값을 바꾸는 handler .
         handleSendMessage, // 현재 초안 메시지를 전송하는 handler .
         handleLoadOlderMessages, // 이전 메시지를 추가로 불러오는 handler .

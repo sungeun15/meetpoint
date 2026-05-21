@@ -26,6 +26,7 @@ export type SavedDeparture = {
     friendId: string | null;
     friendNickname: string | null;
     locationKind: "recent" | "preset";
+    isSelected?: boolean;
     latitude: number;
     longitude: number;
 };
@@ -39,6 +40,8 @@ export type ResolvedLocation = LocationPoint & {
     address: string;
     label: string;
 };
+
+export type LocationMapMarkerVariant = "default" | "me" | "friend";
 
 export type MapMarker = LocationPoint & {
     id: string;
