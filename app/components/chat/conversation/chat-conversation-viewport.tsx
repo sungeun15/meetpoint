@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, type ReactNode } from "react";
 
 import { friendsBodyFont, friendsDisplayFont, friendsHeadingFont } from "../../friends/fonts";
 import { FriendInitialAvatar } from "../../shared/friend-initial-avatar";
@@ -131,7 +131,7 @@ function renderMessageText(text: string, isMine: boolean) {
         return text;
     }
 
-    const segments: Array<string | JSX.Element> = [];
+    const segments: Array<string | ReactNode> = [];
     let currentIndex = 0;
 
     for (const match of matches) {
