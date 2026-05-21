@@ -26,6 +26,7 @@ export type SavedDeparture = {
     friendId: string | null;
     friendNickname: string | null;
     locationKind: "recent" | "preset";
+    isSelected?: boolean;
     latitude: number;
     longitude: number;
 };
