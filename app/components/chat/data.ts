@@ -1,10 +1,9 @@
 import {
     defaultMapCenter,
-    initialChatMessages,
     MAX_RECOMMENDATION_COUNT,
 } from "./recommendation/chat-recommendation-data";
 
-export { defaultMapCenter, initialChatMessages, MAX_RECOMMENDATION_COUNT };
+export { defaultMapCenter, MAX_RECOMMENDATION_COUNT };
 
 export { calculateDistanceKm, calculateMidpoint } from "./recommendation/chat-recommendation-utils";
 export { formatLocationPreview } from "./recommendation/summary/chat-recommendation-summary";

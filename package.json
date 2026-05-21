@@ -12,6 +12,7 @@
     "test:kakao:local": "node scripts/test-kakao/local.mjs",
     "test:supabase": "node scripts/test-supabase/connection.mjs",
     "test:supabase:schema": "node scripts/test-supabase/schema.mjs",
+    "test:supabase:backfill-addresses": "node scripts/test-supabase/backfill-departure-addresses.mjs",
     "test:supabase:table": "node scripts/test-supabase/table.mjs",
     "test:supabase:cleanup": "node scripts/test-supabase/cleanup.mjs"
   },

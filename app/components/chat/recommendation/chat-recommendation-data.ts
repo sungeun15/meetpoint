@@ -1,7 +1,4 @@
-// 초기 대화 메시지는 recommendation 모듈에서도 공통으로 재사용합니다.
-export { initialChatMessages } from "../chat-message-seed";
-
-// 추천 계산에 필요한 카탈로그 상수와 템플릿 타입을 한 곳에서 다시 노출합니다.
+// 이 파일은 추천 카탈로그 상수와 템플릿 타입 정의를 직접 만들지 않고 재노출만 담당합니다.
 export {
     categoryLabelMap,
     defaultMapCenter,

@@ -83,16 +83,106 @@ create table
         id uuid primary key default gen_random_uuid (), -- 저장 위치 고유 식별자
         user_id uuid not null, -- 저장 위치를 소유한 사용자 id
         label varchar(100) not null, -- 사용자가 붙인 위치 이름
+        address text null, -- 저장 당시 확정된 주소 문자열
         lat double precision not null, -- 저장 위치의 위도
         lng double precision not null, -- 저장 위치의 경도
+        owner_party varchar(20) not null default 'me', -- 저장 위치가 내 출발지용인지 친구 출발지용인지 구분
+        friend_id uuid null, -- 친구 출발지용일 때 대상 친구 id
+        friend_nickname varchar(100) null, -- 친구 출발지용일 때 대상 친구 닉네임 스냅샷
         location_kind varchar(20) not null default 'recent', -- 최근 위치인지 프리셋인지 구분
         last_used_at timestamptz not null default now (), -- 마지막 사용 시각
         created_at timestamptz not null default now (), -- 저장 위치 생성 시각
         updated_at timestamptz not null default now (), -- 저장 위치 수정 시각
         constraint departure_locations_user_id_fkey foreign key (user_id) references public.users (id) on delete cascade,
+        constraint departure_locations_friend_id_fkey foreign key (friend_id) references public.users (id) on delete set null,
+        constraint departure_locations_owner_party_check check (owner_party in ('me', 'friend')),
         constraint departure_locations_kind_check check (location_kind in ('recent', 'preset')),
+        constraint departure_locations_friend_metadata_check check (
+            (owner_party = 'me' and friend_id is null and friend_nickname is null)
+            or (owner_party = 'friend' and friend_id is not null and char_length(btrim (friend_nickname)) >= 1)
+        ),
         constraint departure_locations_label_not_blank check (char_length(btrim (label)) >= 1)
     );
+
+alter table public.departure_locations
+    add column if not exists owner_party varchar(20) not null default 'me';
+
+alter table public.departure_locations
+    add column if not exists friend_id uuid null;
+
+alter table public.departure_locations
+    add column if not exists friend_nickname varchar(100) null;
+
+alter table public.departure_locations
+    add column if not exists address text null;
+
+-- 기존 row 마이그레이션: owner/friend 메타를 제약 조건 기준으로 정규화한다.
+update public.departure_locations
+set owner_party = 'me'
+where owner_party is null
+     or owner_party not in ('me', 'friend');
+
+-- me 소유 row 는 friend 메타를 비워 둔다.
+update public.departure_locations
+set friend_id = null,
+        friend_nickname = null
+where owner_party = 'me'
+    and (friend_id is not null or friend_nickname is not null);
+
+-- friend 소유 row 중 닉네임이 비어 있으면 users 닉네임으로 보완한다.
+update public.departure_locations as d
+set friend_nickname = u.nickname
+from public.users as u
+where d.owner_party = 'friend'
+    and d.friend_id = u.id
+    and (d.friend_nickname is null or btrim(d.friend_nickname) = '');
+
+-- friend 소유인데 필수 메타가 비어 있는 row 는 임시로 me 소유로 복구한다.
+update public.departure_locations
+set owner_party = 'me',
+        friend_id = null,
+        friend_nickname = null
+where owner_party = 'friend'
+    and (
+        friend_id is null
+        or friend_nickname is null
+        or btrim(friend_nickname) = ''
+    );
+
+do $$
+begin
+    if not exists (
+        select 1
+        from pg_constraint
+        where conname = 'departure_locations_owner_party_check'
+    ) then
+        alter table public.departure_locations
+            add constraint departure_locations_owner_party_check check (owner_party in ('me', 'friend'));
+    end if;
+
+    if not exists (
+        select 1
+        from pg_constraint
+        where conname = 'departure_locations_friend_metadata_check'
+    ) then
+        alter table public.departure_locations
+            add constraint departure_locations_friend_metadata_check check (
+                (owner_party = 'me' and friend_id is null and friend_nickname is null)
+                or (owner_party = 'friend' and friend_id is not null and char_length(btrim (friend_nickname)) >= 1)
+            );
+    end if;
+
+    if not exists (
+        select 1
+        from pg_constraint
+        where conname = 'departure_locations_address_not_blank_check'
+    ) then
+        alter table public.departure_locations
+            add constraint departure_locations_address_not_blank_check check (
+                address is null or char_length(btrim (address)) >= 1
+            );
+    end if;
+end $$;
 
 create index if not exists users_nickname_normalized_idx on public.users (nickname_normalized);
 
@@ -117,6 +207,8 @@ create index if not exists messages_receiver_sender_read_at_idx on public.messag
 create index if not exists departure_locations_user_last_used_at_idx on public.departure_locations (user_id, last_used_at desc);
 
 create index if not exists departure_locations_user_kind_idx on public.departure_locations (user_id, location_kind);
+
+create index if not exists departure_locations_user_friend_idx on public.departure_locations (user_id, owner_party, friend_id, last_used_at desc);
 
 create or replace function public.accept_friend_request_atomic(
         input_request_id uuid,

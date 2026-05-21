@@ -67,6 +67,24 @@ export function resolveDemoSharedLocationFallback(friendId: string): ResolvedLoc
     };
 }
 
+export function buildMyResolvedLocation(mySharedLocation: SharedLocationState | null) {
+    return mySharedLocation ? {
+        label: mySharedLocation.label,
+        address: mySharedLocation.address,
+        latitude: mySharedLocation.latitude,
+        longitude: mySharedLocation.longitude,
+    } : null;
+}
+
+export function buildFriendResolvedLocation(selectedFriend: FriendItem | null) {
+    return selectedFriend?.locationSnapshot ? {
+        label: `${selectedFriend.nickname} 현재 위치`,
+        address: selectedFriend.locationSnapshot.address,
+        latitude: selectedFriend.locationSnapshot.latitude,
+        longitude: selectedFriend.locationSnapshot.longitude,
+    } : null;
+}
+
 export function buildMyLocationStatus(mySharedLocation: SharedLocationState | null, selectedFriend: FriendItem | null) {
     if (!mySharedLocation) {
         return "아직 내 위치를 공유하지 않았어요. 위치 공유 후 중심점과 추천 지도를 계산할 수 있어요.";

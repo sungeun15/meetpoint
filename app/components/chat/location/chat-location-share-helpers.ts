@@ -1,11 +1,14 @@
 import type { LocationShareScope } from "@/lib/contracts/friends";
 
-import { formatLocationPreview } from "./data";
-import type { ResolvedLocation } from "./types";
+import { formatLocationPreview } from "../data";
+import type { ResolvedLocation } from "../types";
 
 type LocationShareCopy = {
+    // 위치 확인 중에 보여줄 안내 문구입니다.
     checkingMessage: string;
+    // 공유 성공/진행 문구 앞부분으로 사용할 라벨입니다.
     successLabel: string;
+    // 사용자가 직접 지정한 위치를 공유할 때 보여줄 문구입니다.
     manualShareMessage: string;
 };
 

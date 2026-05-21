@@ -2,48 +2,34 @@
 
 import { useEffect, useRef, useState } from "react";
 
-import type { LocationShareScope } from "@/lib/contracts/friends";
-
-import { ChatConversationPanel } from "./chat/chat-conversation-panel";
+import { ChatConversationPanel } from "./chat/conversation/chat-conversation-panel";
+import { ChatFloatingToast } from "./chat/chat-floating-toast";
 import { ChatHeaderCard } from "./chat/chat-header-card";
-import { ChatLocationMapLayer } from "./chat/chat-location-map-layer";
-import { ChatLocationStatusPanel } from "./chat/chat-location-status-panel";
-import { ChatPinPickerLayer } from "./chat/chat-pin-picker-layer";
+import { ChatLocationMapLayer } from "./chat/location/chat-location-map-layer";
+import { ChatLocationStatusPanel } from "./chat/location/chat-location-status-panel";
+import { ChatPinPickerLayer } from "./chat/departure/chat-pin-picker-layer";
 import { ChatRecommendationPanels } from "./chat/recommendation/chat-recommendation-panels";
-import { ChatSaveLocationLayer } from "./chat/chat-save-location-layer";
+import { ChatSaveLocationLayer } from "./chat/location/chat-save-location-layer";
+import {
+    buildFriendResolvedLocation,
+    buildMyResolvedLocation,
+} from "./chat/chat-screen-helpers";
+import {
+    ChatScreenEmptyState,
+    ChatScreenRecommendationLoading,
+    ChatScreenTopPanelsLoading,
+} from "./chat/chat-screen-placeholders";
+import { useChatScreenOverlays } from "./chat/use-chat-screen-overlays";
 import { useChatScreenState } from "./chat/use-chat-screen-state";
-import type { DepartureParty, ResolvedLocation } from "./chat/types";
 import { FriendsSidebar } from "./friends/friends-sidebar";
 
 type ChatScreenProps = {
     requestedFriendId?: string | null;
 };
 
-type PendingLocationSave = {
-    party: DepartureParty;
-    previewValue: string;
-    sourceLabel: string;
-    title: string;
-    resolvedLocation: ResolvedLocation | null;
-    locationKind: "recent" | "preset";
-};
-
-type PendingManualShare = {
-    scope: LocationShareScope;
-};
-
-type ActiveLocationMap = {
-    title: string;
-    description: string;
-    location: ResolvedLocation;
-};
-
 export function ChatScreen({ requestedFriendId = null }: ChatScreenProps) {
     const topPanelsRef = useRef<HTMLDivElement | null>(null);
     const sidebarPanelRef = useRef<HTMLDivElement | null>(null);
-    const [pendingLocationSave, setPendingLocationSave] = useState<PendingLocationSave | null>(null);
-    const [pendingManualShare, setPendingManualShare] = useState<PendingManualShare | null>(null);
-    const [activeLocationMap, setActiveLocationMap] = useState<ActiveLocationMap | null>(null);
     const [isMobileSidebarCollapsed, setIsMobileSidebarCollapsed] = useState(true);
     const {
         isLoadingFriends,
@@ -68,6 +54,9 @@ export function ChatScreen({ requestedFriendId = null }: ChatScreenProps) {
         departureSearchQueries,
         visibleSavedDepartures,
         selectedSavedDepartureIds,
+        selectedFriendDepartureLocation,
+        selectedDepartureFriendId,
+        departureFriendOptions,
         selectedDepartureLabels,
         recommendationSummary,
         canRecommend,
@@ -87,6 +76,7 @@ export function ChatScreen({ requestedFriendId = null }: ChatScreenProps) {
         handleCategoryChange,
         handleDepartureInputMethodChange,
         handleDepartureSearchQueryChange,
+        handleDepartureFriendChange,
         handlePinnedDepartureSelect,
         handleSavedDepartureSelect,
         handleDeleteSavedDeparture,
@@ -97,91 +87,28 @@ export function ChatScreen({ requestedFriendId = null }: ChatScreenProps) {
     } = useChatScreenState(requestedFriendId);
     const friendLastSharedAt = selectedFriend?.locationSnapshot?.sharedAt ?? null;
     const shouldShowLoadingPanels = isLoadingFriends && !selectedFriend;
-    const myResolvedLocation = mySharedLocation ? {
-        label: mySharedLocation.label,
-        address: mySharedLocation.address,
-        latitude: mySharedLocation.latitude,
-        longitude: mySharedLocation.longitude,
-    } : null;
-    const friendResolvedLocation = selectedFriend?.locationSnapshot ? {
-        label: `${selectedFriend.nickname} 현재 위치`,
-        address: selectedFriend.locationSnapshot.address,
-        latitude: selectedFriend.locationSnapshot.latitude,
-        longitude: selectedFriend.locationSnapshot.longitude,
-    } : null;
-
-    function handleOpenSaveLocationLayer(
-        party: DepartureParty,
-        previewValue: string,
-        sourceLabel: string,
-        resolvedLocation?: ResolvedLocation,
-        locationKind: "recent" | "preset" = "preset",
-    ) {
-        setPendingLocationSave({
-            party,
-            previewValue,
-            sourceLabel,
-            title: party === "me" ? "내 위치 저장" : "친구 위치 저장",
-            resolvedLocation: resolvedLocation ?? null,
-            locationKind,
-        });
-    }
-
-    function handleCloseSaveLocationLayer() {
-        setPendingLocationSave(null);
-    }
-
-    function handleOpenManualShareLayer(scope: LocationShareScope) {
-        setPendingLocationSave(null);
-        setPendingManualShare({ scope });
-    }
-
-    function handleCloseManualShareLayer() {
-        setPendingManualShare(null);
-    }
-
-    function handleOpenLocationMap(title: string, description: string, location: ResolvedLocation | null) {
-        if (!location) {
-            return;
-        }
-
-        setActiveLocationMap({ title, description, location });
-    }
-
-    function handleCloseLocationMap() {
-        setActiveLocationMap(null);
-    }
-
-    async function handleConfirmSaveLocation(nextTitle: string) {
-        if (!pendingLocationSave) {
-            return;
-        }
-
-        const didSave = await handleCreateSavedDeparture(
-            pendingLocationSave.party,
-            nextTitle,
-            pendingLocationSave.previewValue,
-            pendingLocationSave.sourceLabel,
-            pendingLocationSave.resolvedLocation,
-            pendingLocationSave.locationKind,
-        );
-
-        if (didSave) {
-            setPendingLocationSave(null);
-        }
-    }
-
-    async function handleConfirmManualShare(location: ResolvedLocation) {
-        if (!pendingManualShare) {
-            return;
-        }
-
-        const didShare = await handleShareResolvedLocation(pendingManualShare.scope, location);
-
-        if (didShare) {
-            setPendingManualShare(null);
-        }
-    }
+    const myResolvedLocation = buildMyResolvedLocation(mySharedLocation);
+    const friendResolvedLocation = buildFriendResolvedLocation(selectedFriend);
+    const {
+        pendingLocationSave,
+        pendingManualShare,
+        activeLocationMap,
+        chatScreenToast,
+        setChatScreenToast,
+        handleShowToast,
+        handleOpenSaveLocationLayer,
+        handleCloseSaveLocationLayer,
+        handleOpenManualShareLayer,
+        handleCloseManualShareLayer,
+        handleOpenLocationMap,
+        handleCloseLocationMap,
+        handleConfirmSaveLocation,
+        handleConfirmManualShare,
+    } = useChatScreenOverlays({
+        selectedFriend,
+        onCreateSavedDeparture: handleCreateSavedDeparture,
+        onShareResolvedLocation: handleShareResolvedLocation,
+    });
 
     function handleToggleMobileSidebar() {
         setIsMobileSidebarCollapsed((currentValue) => !currentValue);
@@ -267,6 +194,7 @@ export function ChatScreen({ requestedFriendId = null }: ChatScreenProps) {
                                 selectedFriend={selectedFriend}
                                 lastSharedAt={friendLastSharedAt}
                                 friendResolvedLocation={friendResolvedLocation}
+                                selectedFriendDepartureLocation={selectedFriendDepartureLocation}
                                 onOpenLocationMap={handleOpenLocationMap}
                             />
 
@@ -300,40 +228,12 @@ export function ChatScreen({ requestedFriendId = null }: ChatScreenProps) {
                             />
                         </div>
                     ) : shouldShowLoadingPanels ? (
-                        <div ref={topPanelsRef} className="grid min-w-0 gap-2.5 sm:gap-4 xl:gap-5">
-                            <div className="rounded-[24px] bg-white px-5 py-5 shadow-[0px_18px_44px_rgba(52,41,104,0.14)] sm:px-6 sm:py-6">
-                                <div className="space-y-3 animate-pulse">
-                                    <div className="h-6 w-40 rounded-full bg-[#ece7ff]" />
-                                    <div className="h-4 w-64 max-w-full rounded-full bg-[#f2eeff]" />
-                                </div>
-                            </div>
-
-                            <div className="rounded-[24px] bg-white px-5 py-5 shadow-[0px_18px_44px_rgba(52,41,104,0.14)] sm:px-6 sm:py-6">
-                                <div className="space-y-3 animate-pulse">
-                                    <div className="h-5 w-28 rounded-full bg-[#ece7ff]" />
-                                    <div className="space-y-2">
-                                        <div className="h-4 w-full rounded-full bg-[#f4f0ff]" />
-                                        <div className="h-4 w-5/6 rounded-full bg-[#f4f0ff]" />
-                                        <div className="h-12 w-full rounded-2xl bg-[#f7f4ff]" />
-                                    </div>
-                                </div>
-                            </div>
-
-                            <div className="rounded-[24px] bg-white px-5 py-5 shadow-[0px_18px_44px_rgba(52,41,104,0.14)] sm:px-6 sm:py-6">
-                                <div className="space-y-3 animate-pulse">
-                                    <div className="h-5 w-32 rounded-full bg-[#ece7ff]" />
-                                    <div className="h-24 w-full rounded-[20px] bg-[#f7f4ff]" />
-                                </div>
-                            </div>
+                        <div ref={topPanelsRef}>
+                            <ChatScreenTopPanelsLoading />
                         </div>
                     ) : (
-                        <div ref={topPanelsRef} className="rounded-[24px] bg-white px-5 py-8 text-center shadow-[0px_18px_44px_rgba(52,41,104,0.14)] sm:px-6 sm:py-10">
-                            <p className="text-[20px] font-semibold text-[#1f2937] sm:text-[24px]">
-                                대화를 시작할 친구를 선택해 주세요.
-                            </p>
-                            <p className="mt-2 text-[14px] leading-[1.7] text-[#6b7280] sm:text-[15px]">
-                                아직 수락된 친구가 없다면 friends 화면에서 친구 요청 상태를 먼저 확인해 보세요.
-                            </p>
+                        <div ref={topPanelsRef}>
+                            <ChatScreenEmptyState />
                         </div>
                     )}
                 </div>
@@ -346,6 +246,10 @@ export function ChatScreen({ requestedFriendId = null }: ChatScreenProps) {
                         departureSearchQueries={departureSearchQueries}
                         visibleSavedDepartures={visibleSavedDepartures}
                         selectedSavedDepartureIds={selectedSavedDepartureIds}
+                        selectedDepartureFriendId={selectedDepartureFriendId}
+                        departureFriendOptions={departureFriendOptions}
+                        selectedFriendId={activeFriendId}
+                        onShowToast={handleShowToast}
                         selectedDepartureLabels={selectedDepartureLabels}
                         selectedFriendName={selectedFriend.nickname}
                         recommendationSummary={recommendationSummary}
@@ -354,6 +258,7 @@ export function ChatScreen({ requestedFriendId = null }: ChatScreenProps) {
                         onCategoryChange={handleCategoryChange}
                         onDepartureInputMethodChange={handleDepartureInputMethodChange}
                         onDepartureSearchQueryChange={handleDepartureSearchQueryChange}
+                        onDepartureFriendChange={handleDepartureFriendChange}
                         onOpenSaveLocationLayer={handleOpenSaveLocationLayer}
                         onPinnedDepartureSelect={handlePinnedDepartureSelect}
                         onSavedDepartureSelect={handleSavedDepartureSelect}
@@ -366,17 +271,7 @@ export function ChatScreen({ requestedFriendId = null }: ChatScreenProps) {
                         mapMarkers={mapMarkers}
                     />
                 ) : shouldShowLoadingPanels ? (
-                    <div className="rounded-[24px] bg-white px-5 py-5 shadow-[0px_18px_44px_rgba(52,41,104,0.14)] sm:px-6 sm:py-6">
-                        <div className="space-y-3 animate-pulse">
-                            <div className="h-5 w-36 rounded-full bg-[#ece7ff]" />
-                            <div className="h-4 w-64 max-w-full rounded-full bg-[#f2eeff]" />
-                            <div className="grid gap-3 lg:grid-cols-3">
-                                <div className="h-28 rounded-[20px] bg-[#f7f4ff]" />
-                                <div className="h-28 rounded-[20px] bg-[#f7f4ff]" />
-                                <div className="h-28 rounded-[20px] bg-[#f7f4ff]" />
-                            </div>
-                        </div>
-                    </div>
+                    <ChatScreenRecommendationLoading />
                 ) : null}
 
                 {pendingLocationSave ? (
@@ -422,6 +317,11 @@ export function ChatScreen({ requestedFriendId = null }: ChatScreenProps) {
                         onClose={handleCloseLocationMap}
                     />
                 ) : null}
+
+                <ChatFloatingToast
+                    toast={chatScreenToast}
+                    onDismiss={() => setChatScreenToast(null)}
+                />
             </div>
         </section>
     );

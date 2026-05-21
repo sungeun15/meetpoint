@@ -22,6 +22,9 @@ export type SavedDeparture = {
     address: string;
     description: string;
     lastUsedAt?: string;
+    ownerParty: DepartureParty;
+    friendId: string | null;
+    friendNickname: string | null;
     locationKind: "recent" | "preset";
     latitude: number;
     longitude: number;
