@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { useRouter } from "next/navigation";
 
 import { ChatConversationPanel } from "./chat/conversation/chat-conversation-panel";
 import { ChatFloatingToast } from "./chat/chat-floating-toast";
@@ -28,9 +29,11 @@ type ChatScreenProps = {
 };
 
 export function ChatScreen({ requestedFriendId = null }: ChatScreenProps) {
+    const router = useRouter();
     const topPanelsRef = useRef<HTMLDivElement | null>(null);
     const sidebarPanelRef = useRef<HTMLDivElement | null>(null);
     const [isMobileSidebarCollapsed, setIsMobileSidebarCollapsed] = useState(true);
+    const [shouldRedirectToLogin, setShouldRedirectToLogin] = useState(false);
     const {
         isLoadingFriends,
         isLoadingMessages,
@@ -66,6 +69,7 @@ export function ChatScreen({ requestedFriendId = null }: ChatScreenProps) {
         recommendationCards,
         mapMarkers,
         handleSelectFriend,
+        handleLeaveChatRoom,
         handleDraftMessageChange,
         handleSendMessage,
         handleLoadOlderMessages,
@@ -84,7 +88,7 @@ export function ChatScreen({ requestedFriendId = null }: ChatScreenProps) {
         handleUpdateSavedDeparture,
         handleCreateSavedDeparture,
         handleRecommend,
-    } = useChatScreenState(requestedFriendId);
+    } = useChatScreenState(requestedFriendId, setShouldRedirectToLogin);
     const friendLastSharedAt = selectedFriend?.locationSnapshot?.sharedAt ?? null;
     const shouldShowLoadingPanels = isLoadingFriends && !selectedFriend;
     const myResolvedLocation = buildMyResolvedLocation(mySharedLocation);
@@ -168,6 +172,18 @@ export function ChatScreen({ requestedFriendId = null }: ChatScreenProps) {
         };
     }, []);
 
+    useEffect(() => {
+        // 라우팅 결정은 화면 최상단에서만 처리해 하위 상태 훅은 데이터 관리에만 집중시킨다.
+        if (shouldRedirectToLogin) {
+            router.replace("/login");
+            return;
+        }
+
+        if (!isLoadingFriends && !selectedFriend) {
+            router.replace("/friends");
+        }
+    }, [isLoadingFriends, router, selectedFriend, shouldRedirectToLogin]);
+
     return (
         <section className="flex min-h-[calc(100vh-72px)] flex-1 overflow-x-hidden bg-[#eeebff] px-2.5 py-2.5 sm:px-4 sm:py-4 md:min-h-[calc(100vh-84px)] md:px-5 md:py-5 lg:px-6 lg:py-6 xl:px-7 xl:py-8">
             <div className="mx-auto grid min-w-0 w-full max-w-360 gap-2 sm:gap-3 xl:gap-4">
@@ -196,6 +212,7 @@ export function ChatScreen({ requestedFriendId = null }: ChatScreenProps) {
                                 friendResolvedLocation={friendResolvedLocation}
                                 selectedFriendDepartureLocation={selectedFriendDepartureLocation}
                                 onOpenLocationMap={handleOpenLocationMap}
+                                onLeaveChatRoom={() => handleLeaveChatRoom(selectedFriend.id)}
                             />
 
                             <ChatConversationPanel

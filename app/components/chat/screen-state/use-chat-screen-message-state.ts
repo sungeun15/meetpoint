@@ -44,6 +44,7 @@ type MessageFeedState = {
 
 type UseChatScreenMessageStateArgs = {
     activeFriendId: string; // 현재 대화 중인 친구 id 입니다.
+    setShouldRedirectToLogin: Dispatch<SetStateAction<boolean>>;
     setFeedbackMessage: Dispatch<SetStateAction<string | null>>; // 상위 화면 피드백 문구를 갱신합니다.
     setFriends: Dispatch<SetStateAction<FriendItem[]>>; // 메시지 읽음 처리 후 친구 unreadCount 를 동기화합니다.
 };
@@ -224,6 +225,7 @@ function buildMessageFeedState(
 
 export function useChatScreenMessageState({
     activeFriendId,
+    setShouldRedirectToLogin,
     setFeedbackMessage,
     setFriends,
 }: UseChatScreenMessageStateArgs) {
@@ -261,7 +263,7 @@ export function useChatScreenMessageState({
                 }
 
                 if (result.status === "unauthorized") {
-                    window.location.href = "/login";
+                    setShouldRedirectToLogin(true);
                     return;
                 }
 
@@ -296,7 +298,7 @@ export function useChatScreenMessageState({
         return () => {
             isMounted = false;
         };
-    }, [activeFriendId, setFeedbackMessage, setFriends]);
+    }, [activeFriendId, setFeedbackMessage, setFriends, setShouldRedirectToLogin]);
 
     useEffect(() => {
         if (!activeFriendId || isLoadingMessages) {
@@ -323,7 +325,7 @@ export function useChatScreenMessageState({
                 }
 
                 if (result.status === "unauthorized") {
-                    window.location.href = "/login";
+                    setShouldRedirectToLogin(true);
                     return;
                 }
 
@@ -367,7 +369,7 @@ export function useChatScreenMessageState({
                 clearTimeout(timeoutId);
             }
         };
-    }, [activeFriendId, isLoadingMessages, messageState.newestCreatedAt, messageState.newestMessageId, setFeedbackMessage, setFriends]);
+    }, [activeFriendId, isLoadingMessages, messageState.newestCreatedAt, messageState.newestMessageId, setFeedbackMessage, setFriends, setShouldRedirectToLogin]);
 
     const selectedMessages = useMemo(
         () => (messageState.friendId === activeFriendId ? messageState.items : []),
@@ -408,7 +410,7 @@ export function useChatScreenMessageState({
             });
 
             if (result.status === "unauthorized") {
-                window.location.href = "/login";
+                setShouldRedirectToLogin(true);
                 return;
             }
 
@@ -450,7 +452,7 @@ export function useChatScreenMessageState({
             });
 
             if (result.status === "unauthorized") {
-                window.location.href = "/login";
+                setShouldRedirectToLogin(true);
                 return false;
             }
 

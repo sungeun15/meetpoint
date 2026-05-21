@@ -268,3 +268,42 @@ begin
         return next;
 end;
 $$;
+
+create or replace function public.remove_friend_relation_atomic(
+    input_user_id uuid,
+    input_friend_user_id uuid
+)
+returns boolean
+language plpgsql
+as $$
+declare
+    has_relation boolean;
+begin
+    -- 메시지 삭제와 친구 관계 삭제를 한 함수에서 묶어 중간 실패 시 부분 삭제를 막는다.
+    select exists(
+        select 1
+        from public.friends
+        where status = 'accepted'
+            and (
+            (user_id = input_user_id and friend_id = input_friend_user_id)
+            or (user_id = input_friend_user_id and friend_id = input_user_id)
+            )
+    )
+    into has_relation;
+
+    if not has_relation then
+        return false;
+    end if;
+
+    delete from public.messages
+    where (sender_id = input_user_id and receiver_id = input_friend_user_id)
+        or (sender_id = input_friend_user_id and receiver_id = input_user_id);
+
+    delete from public.friends
+    where status = 'accepted'
+        and user_id in (input_user_id, input_friend_user_id)
+        and friend_id in (input_user_id, input_friend_user_id);
+
+    return true;
+end;
+$$;

@@ -51,6 +51,7 @@ type UseRecommendationFlowStateArgs = {
     mySharedLocation: (ResolvedLocation & { sharedAt: string }) | null; // 현재 선택 친구에게 실제로 공유된 내 위치.
     selectedFriend: FriendItem | null; // 위치/닉네임/마커 라벨 계산에 사용할 현재 선택 친구 정보.
     availableFriends: FriendItem[];
+    setShouldRedirectToLogin: Dispatch<SetStateAction<boolean>>;
     setFeedbackMessage: Dispatch<SetStateAction<string | null>>; // 추천 진행 상태와 안내 문구를 상위 UI에 전달합니다.
 };
 
@@ -60,6 +61,7 @@ export function useRecommendationFlowState({
     mySharedLocation,
     selectedFriend,
     availableFriends,
+    setShouldRedirectToLogin,
     setFeedbackMessage,
 }: UseRecommendationFlowStateArgs) {
     const [recommendationSnapshots, setRecommendationSnapshots] = useState<Record<string, RecommendationSnapshot>>({});
@@ -94,7 +96,7 @@ export function useRecommendationFlowState({
                 }
 
                 if (result.status === "unauthorized") {
-                    window.location.href = "/login";
+                    setShouldRedirectToLogin(true);
                     return;
                 }
 
@@ -116,7 +118,7 @@ export function useRecommendationFlowState({
         return () => {
             isMounted = false;
         };
-    }, [setFeedbackMessage]);
+    }, [setFeedbackMessage, setShouldRedirectToLogin]);
 
     // 친구별로 캐시해 둔 추천 결과가 있으면 즉시 꺼내 쓰고, 없으면 미리보기 상태로 동작합니다.
     const activeRecommendationSnapshot = recommendationSnapshots[activeFriendId] ?? null;
@@ -279,7 +281,7 @@ export function useRecommendationFlowState({
             const result = await markSavedDepartureAsUsed(departureId);
 
             if (result.status === "unauthorized") {
-                window.location.href = "/login";
+                setShouldRedirectToLogin(true);
                 return false;
             }
 
@@ -309,7 +311,7 @@ export function useRecommendationFlowState({
             const result = await deleteSavedDepartures([departureId]);
 
             if (result.status === "unauthorized") {
-                window.location.href = "/login";
+                setShouldRedirectToLogin(true);
                 return false;
             }
 
@@ -350,7 +352,7 @@ export function useRecommendationFlowState({
             const result = await deleteSavedDepartures(departureLocationIds);
 
             if (result.status === "unauthorized") {
-                window.location.href = "/login";
+                setShouldRedirectToLogin(true);
                 return false;
             }
 
@@ -400,7 +402,7 @@ export function useRecommendationFlowState({
             });
 
             if (result.status === "unauthorized") {
-                window.location.href = "/login";
+                setShouldRedirectToLogin(true);
                 return false;
             }
 
@@ -477,7 +479,7 @@ export function useRecommendationFlowState({
             });
 
             if (result.status === "unauthorized") {
-                window.location.href = "/login";
+                setShouldRedirectToLogin(true);
                 return false;
             }
 
@@ -527,7 +529,7 @@ export function useRecommendationFlowState({
             }
 
             if (recommendationResult.status === "unauthorized") {
-                window.location.href = "/login";
+                setShouldRedirectToLogin(true);
                 return;
             }
 

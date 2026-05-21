@@ -1,5 +1,6 @@
 import { apiError, apiOk } from "@/lib/contracts/api";
 import type {
+    FriendLeaveResponse,
     FriendRequestActionResponse,
     FriendSearchResponse,
     FriendsListResponse,
@@ -10,6 +11,7 @@ import {
     getFriendRelationState,
     listFriendsForUser,
     listPendingFriendRequestsForUser,
+    removeFriendRelation,
     rejectFriendRequest,
 } from "@/lib/repositories/friends";
 import { findUserById, findUserByNicknameNormalized, maskUserLocationForViewer } from "@/lib/repositories/users";
@@ -186,5 +188,33 @@ export const PATCH = createProtectedRoute(async (request, { currentUserId }) => 
         }
 
         return apiError("INTERNAL_ERROR", "친구 요청 처리 중 오류가 발생했습니다.", 500);
+    }
+});
+
+// 채팅방 나가기는 현재 친구 관계를 끊고 목록에서 제거한다.
+export const DELETE = createProtectedRoute(async (request, { currentUserId }) => {
+    try {
+        const body = await request.json();
+        const friendId = validateUuid(body.friendId, "friendId");
+        const deleted = await removeFriendRelation({
+            userId: currentUserId,
+            friendUserId: friendId,
+        });
+
+        if (!deleted) {
+            return apiError("FRIEND_NOT_FOUND", "나갈 채팅방을 찾지 못했습니다.", 404);
+        }
+
+        return apiOk({ friendId } satisfies FriendLeaveResponse);
+    } catch (error) {
+        if (error instanceof InputValidationError) {
+            return apiError("INVALID_INPUT", error.message, 400);
+        }
+
+        if (error instanceof SyntaxError) {
+            return apiError("INVALID_INPUT", "요청 본문 형식이 올바르지 않습니다.", 400);
+        }
+
+        return apiError("INTERNAL_ERROR", "채팅방 나가기 처리 중 오류가 발생했습니다.", 500);
     }
 });

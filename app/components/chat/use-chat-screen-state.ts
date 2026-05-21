@@ -1,5 +1,6 @@
 "use client";
 
+import type { Dispatch, SetStateAction } from "react";
 import { useState } from "react";
 
 import { useChatScreenFriendsState } from "./screen-state/use-chat-screen-friends-state";
@@ -7,7 +8,10 @@ import { useChatScreenLocationState } from "./screen-state/use-chat-screen-locat
 import { useChatScreenMessageState } from "./screen-state/use-chat-screen-message-state";
 import { useRecommendationFlowState } from "./recommendation/use-recommendation-flow-state";
 
-export function useChatScreenState(requestedFriendId: string | null = null) {
+export function useChatScreenState(
+    requestedFriendId: string | null = null,
+    setShouldRedirectToLogin: Dispatch<SetStateAction<boolean>>,
+) {
     const [feedbackMessage, setFeedbackMessage] = useState<string | null>(null);
     const {
         friends,
@@ -19,8 +23,10 @@ export function useChatScreenState(requestedFriendId: string | null = null) {
         filteredFriends,
         selectedFriend,
         handleSelectFriend,
+        handleLeaveChatRoom,
     } = useChatScreenFriendsState({
         requestedFriendId,
+        setShouldRedirectToLogin,
         setFeedbackMessage,
     });
     const {
@@ -34,6 +40,7 @@ export function useChatScreenState(requestedFriendId: string | null = null) {
         handleLoadOlderMessages,
     } = useChatScreenMessageState({
         activeFriendId,
+        setShouldRedirectToLogin,
         setFeedbackMessage,
         setFriends,
     });
@@ -49,6 +56,7 @@ export function useChatScreenState(requestedFriendId: string | null = null) {
     } = useChatScreenLocationState({
         activeFriendId,
         selectedFriend,
+        setShouldRedirectToLogin,
         setFeedbackMessage,
     });
     const {
@@ -86,6 +94,7 @@ export function useChatScreenState(requestedFriendId: string | null = null) {
         mySharedLocation: myLocationForSelectedFriend,
         selectedFriend,
         availableFriends: friends,
+        setShouldRedirectToLogin,
         setFeedbackMessage,
     });
 
@@ -124,6 +133,7 @@ export function useChatScreenState(requestedFriendId: string | null = null) {
         recommendationCards, // 추천 결과 카드 목록.
         mapMarkers, // 지도에 그릴 사람/중심점/장소 marker 목록.
         handleSelectFriend, // 현재 대화 친구를 바꾸는 handler .
+        handleLeaveChatRoom, // 현재 친구 채팅방에서 나가는 handler .
         handleDraftMessageChange, // 메시지 초안 입력값을 바꾸는 handler .
         handleSendMessage, // 현재 초안 메시지를 전송하는 handler .
         handleLoadOlderMessages, // 이전 메시지를 추가로 불러오는 handler .

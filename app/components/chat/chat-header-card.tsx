@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 import { friendsBodyFont, friendsDisplayFont, friendsHeadingFont } from "../friends/fonts";
 import type { FriendItem } from "../friends/types";
 import { FriendInitialAvatar } from "../shared/friend-initial-avatar";
+import { ModalShell } from "../shared/modal-shell";
 import { ChatActionButton, ChatSectionCard } from "./chat-ui";
 import type { LocationMapMarkerVariant, ResolvedLocation } from "./types";
 
@@ -17,6 +18,7 @@ type ChatHeaderCardProps = {
         location: ResolvedLocation | null,
         markerVariant?: LocationMapMarkerVariant,
     ) => void;
+    onLeaveChatRoom: () => Promise<boolean>;
 };
 
 export function ChatHeaderCard({
@@ -25,10 +27,14 @@ export function ChatHeaderCard({
     friendResolvedLocation,
     selectedFriendDepartureLocation,
     onOpenLocationMap,
+    onLeaveChatRoom,
 }: ChatHeaderCardProps) {
     const [isMobileHeaderCollapsed, setIsMobileHeaderCollapsed] = useState(true);
     const [feedbackMessage, setFeedbackMessage] = useState<string | null>(null);
+    const [isLeaveConfirmLayerOpen, setIsLeaveConfirmLayerOpen] = useState(false);
+    const [isLeavingChatRoom, setIsLeavingChatRoom] = useState(false);
     const headerActionButtonClassName = `${friendsDisplayFont.className} min-h-9 w-full rounded-[12px] px-2.5 py-1.5 text-[12px] sm:min-h-[42px] sm:px-4 sm:py-2 sm:text-[14px] lg:text-[16px]`;
+    const destructiveHeaderActionButtonClassName = `${headerActionButtonClassName} border-[#ef4444] text-[#ef4444] hover:bg-[#fff1f2] hover:shadow-none`;
 
     useEffect(() => {
         if (!feedbackMessage) return;
@@ -66,6 +72,37 @@ export function ChatHeaderCard({
             selectedFriendDepartureLocation,
             "friend",
         );
+    }
+
+    async function handleLeaveChatRoomClick() {
+        if (isLeavingChatRoom) {
+            return;
+        }
+
+        setIsLeaveConfirmLayerOpen(true);
+    }
+
+    function handleCloseLeaveConfirmLayer() {
+        if (isLeavingChatRoom) {
+            return;
+        }
+
+        setIsLeaveConfirmLayerOpen(false);
+    }
+
+    async function handleConfirmLeaveChatRoom() {
+        if (isLeavingChatRoom) {
+            return;
+        }
+
+        setIsLeavingChatRoom(true);
+
+        try {
+            await onLeaveChatRoom();
+            setIsLeaveConfirmLayerOpen(false);
+        } finally {
+            setIsLeavingChatRoom(false);
+        }
     }
 
     return (
@@ -120,6 +157,15 @@ export function ChatHeaderCard({
                     >
                         저장된 친구 위치 확인
                     </ChatActionButton>
+
+                    <ChatActionButton
+                        variant="outline"
+                        onClick={handleLeaveChatRoomClick}
+                        disabled={isLeavingChatRoom}
+                        className={destructiveHeaderActionButtonClassName}
+                    >
+                        {isLeavingChatRoom ? "나가는 중..." : "채팅방 나가기"}
+                    </ChatActionButton>
                 </div>
             </div>
 
@@ -127,6 +173,47 @@ export function ChatHeaderCard({
                 <div className="mt-3 rounded-[8px] bg-[#fef3f2] px-3 py-2 text-[12px] leading-[1.5] text-[#d32f2f] sm:text-[13px]">
                     {feedbackMessage}
                 </div>
+            )}
+
+            {isLeaveConfirmLayerOpen && (
+                <ModalShell
+                    title="채팅방 나가기"
+                    description="채팅방에서 나가면 친구 관계와 대화 내용이 함께 정리됩니다."
+                    onClose={handleCloseLeaveConfirmLayer}
+                    panelClassName="max-w-lg"
+                    contentClassName="space-y-4"
+                >
+                    <div className="rounded-2xl border border-[#ffe1e1] bg-[#fff5f5] px-4 py-4">
+                        <p className={`${friendsBodyFont.className} text-[11px] uppercase tracking-[0.16em] text-[#d14343]`}>
+                            확인 필요
+                        </p>
+                        <p className={`${friendsHeadingFont.className} mt-2 text-[20px] text-[#111827] sm:text-[22px]`}>
+                            {selectedFriend.nickname} 님과의 채팅방에서 나가시겠어요?
+                        </p>
+                        <p className={`${friendsDisplayFont.className} mt-2 text-[14px] leading-[1.6] text-[#4f5875]`}>
+                            나가기를 완료하면 현재 화면에서 채팅방이 닫히고 친구 목록에서 제거되며, 지금까지의 채팅 대화 내용도 전부 삭제됩니다.
+                        </p>
+                    </div>
+
+                    <div className="flex gap-2">
+                        <button
+                            type="button"
+                            onClick={handleCloseLeaveConfirmLayer}
+                            disabled={isLeavingChatRoom}
+                            className={`${friendsBodyFont.className} min-h-11 flex-1 rounded-xl border border-[#ffd4d4] px-4 py-2 text-[14px] text-[#6b7280] transition-colors hover:bg-[#fff7f7] disabled:cursor-not-allowed disabled:opacity-60`}
+                        >
+                            취소
+                        </button>
+                        <button
+                            type="button"
+                            onClick={handleConfirmLeaveChatRoom}
+                            disabled={isLeavingChatRoom}
+                            className={`${friendsHeadingFont.className} min-h-11 flex-1 rounded-xl bg-[#ef4444] px-4 py-2 text-[14px] font-bold text-white transition-colors hover:bg-[#dc2626] disabled:cursor-not-allowed disabled:opacity-60`}
+                        >
+                            {isLeavingChatRoom ? "나가는 중..." : "채팅방 나가기"}
+                        </button>
+                    </div>
+                </ModalShell>
             )}
         </ChatSectionCard>
     );

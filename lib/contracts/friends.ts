@@ -43,6 +43,10 @@ export type FriendRequestActionResponse =
         requesterId: string;
     };
 
+export type FriendLeaveResponse = {
+    friendId: string;
+};
+
 export type FriendSearchResponse = {
     friend: FriendSummary | null;
     relation: {
