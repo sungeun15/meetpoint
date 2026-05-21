@@ -58,7 +58,7 @@ export function useChatScreenState(requestedFriendId: string | null = null) {
         departureSearchQueries,
         visibleSavedDepartures,
         selectedSavedDepartureIds,
-        selectedSavedDepartures,
+        selectedFriendDepartureLocation,
         selectedDepartureFriendId,
         departureFriendOptions,
         selectedDepartureLabels,
@@ -88,16 +88,6 @@ export function useChatScreenState(requestedFriendId: string | null = null) {
         availableFriends: friends,
         setFeedbackMessage,
     });
-    const selectedFriendDepartureLocation = meetingMode === "later"
-        && departureInputMethod === "saved"
-        && selectedSavedDepartures.friend
-        ? {
-            label: selectedSavedDepartures.friend.label,
-            address: selectedSavedDepartures.friend.address,
-            latitude: selectedSavedDepartures.friend.latitude,
-            longitude: selectedSavedDepartures.friend.longitude,
-        }
-        : null;
 
     return {
         isLoadingFriends, // 친구 목록을 아직 불러오는 중인지 나타냅니다.
@@ -122,7 +112,7 @@ export function useChatScreenState(requestedFriendId: string | null = null) {
         departureSearchQueries, // 참여자별 출발지 검색 입력값.
         visibleSavedDepartures, // 현재 필터 기준으로 보여 줄 저장 출발지 목록.
         selectedSavedDepartureIds, // 참여자별 현재 선택된 저장 출발지 id .
-        selectedFriendDepartureLocation, // 나중에 만나기에서 현재 선택된 친구 저장 출발 위치입니다.
+        selectedFriendDepartureLocation, // 헤더의 "저장된 친구 위치 확인" 버튼이 바로 사용할 친구 저장 위치입니다.
         selectedDepartureFriendId, // 친구 출발지 목록에 적용된 친구 필터 id .
         departureFriendOptions, // 친구 출발지 필터 드롭다운 옵션 목록.
         selectedDepartureLabels, // 추천 계산에 실제로 사용할 출발지 라벨.

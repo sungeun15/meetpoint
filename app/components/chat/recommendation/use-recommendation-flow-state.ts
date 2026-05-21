@@ -17,6 +17,11 @@ import {
     departurePartyOrder,
 } from "./chat-recommendation-flow-helpers";
 import { runRecommendationFlow } from "./flow-state/chat-recommendation-runner";
+import {
+    buildSelectedFriendDepartureLocation,
+    buildSelectedSavedDepartureIdsWithPersistedFallback,
+    replaceSavedDepartureWithSelection,
+} from "./flow-state/chat-recommendation-saved-departure-selection";
 import { useRecommendationDepartureDerivedState } from "./flow-state/use-recommendation-departure-derived-state";
 import {
     createSavedDepartureRequest,
@@ -116,6 +121,12 @@ export function useRecommendationFlowState({
     // 친구별로 캐시해 둔 추천 결과가 있으면 즉시 꺼내 쓰고, 없으면 미리보기 상태로 동작합니다.
     const activeRecommendationSnapshot = recommendationSnapshots[activeFriendId] ?? null;
     const friendName = selectedFriend?.nickname ?? "친구";
+    const selectedSavedDepartureIdsWithPersistedFallback = useMemo(() => buildSelectedSavedDepartureIdsWithPersistedFallback({
+        activeFriendId,
+        preferredDepartureFriendId,
+        savedDepartures,
+        selectedSavedDepartureIds,
+    }), [activeFriendId, preferredDepartureFriendId, savedDepartures, selectedSavedDepartureIds]);
     const {
         departureFriendOptions,
         selectedDepartureFriendId,
@@ -131,7 +142,7 @@ export function useRecommendationFlowState({
         preferredDepartureFriendId,
         selectedFriend,
         savedDepartures,
-        selectedSavedDepartureIds,
+        selectedSavedDepartureIds: selectedSavedDepartureIdsWithPersistedFallback,
         meetingMode,
         departureInputMethod,
         departureSearchQueries,
@@ -149,6 +160,7 @@ export function useRecommendationFlowState({
     const hasRecommendations = Boolean(activeRecommendationSnapshot);
     const hasMyLocationStatusData = Boolean(mySharedLocation);
     const hasFriendLocationStatusData = Boolean(friendLocation);
+    const selectedFriendDepartureLocation = buildSelectedFriendDepartureLocation(selectedSavedDepartures.friend);
 
     const recommendationCards = activeRecommendationSnapshot?.cards ?? [];
     const currentMyDepartureSummaryLabel = formatDepartureSummaryLabel(mySharedLocation?.address, "현재 위치");
@@ -278,10 +290,7 @@ export function useRecommendationFlowState({
 
             const nextDepartureFromApi = mapSavedDepartureApiItem(result.data.departure);
             setSavedDepartures((currentSavedDepartures) => {
-                return [
-                    nextDepartureFromApi,
-                    ...currentSavedDepartures.filter((departure) => departure.id !== nextDepartureFromApi.id),
-                ];
+                return replaceSavedDepartureWithSelection(currentSavedDepartures, nextDepartureFromApi);
             });
             setSelectedSavedDepartureIds((currentIds) => ({
                 ...currentIds,
@@ -401,9 +410,7 @@ export function useRecommendationFlowState({
             }
 
             const nextSavedDeparture = mapSavedDepartureApiItem(result.data.departure);
-            setSavedDepartures((currentSavedDepartures) => currentSavedDepartures.map((departure) => (
-                departure.id === departureId ? nextSavedDeparture : departure
-            )));
+            setSavedDepartures((currentSavedDepartures) => replaceSavedDepartureWithSelection(currentSavedDepartures, nextSavedDeparture));
             setSelectedSavedDepartureIds((currentIds) => ({
                 ...currentIds,
                 [party]: departureId,
@@ -480,7 +487,7 @@ export function useRecommendationFlowState({
             }
 
             const nextSavedDeparture = mapSavedDepartureApiItem(result.data.departure);
-            setSavedDepartures((currentSavedDepartures) => [nextSavedDeparture, ...currentSavedDepartures.filter((departure) => departure.id !== nextSavedDeparture.id)]);
+            setSavedDepartures((currentSavedDepartures) => replaceSavedDepartureWithSelection(currentSavedDepartures, nextSavedDeparture));
             setSelectedSavedDepartureIds((currentIds) => ({
                 ...currentIds,
                 [party]: nextSavedDeparture.id,
@@ -551,6 +558,7 @@ export function useRecommendationFlowState({
         visibleSavedDepartures, // 현재 친구 필터까지 반영된 저장 출발지 목록.
         selectedSavedDepartureIds: effectiveSelectedSavedDepartureIds, // 현재 목록 기준으로 보정된 저장 출발지 선택 id .
         selectedSavedDepartures, // 참여자별로 현재 선택된 저장 출발지 원본 객체입니다.
+        selectedFriendDepartureLocation, // 헤더에서 바로 쓸 친구 저장 출발 위치입니다.
         selectedDepartureFriendId, // 친구 출발지 저장 목록에 적용 중인 친구 필터 id .
         departureFriendOptions, // 친구 필터 드롭다운에 보여 줄 옵션 목록.
         selectedDepartureLabels, // 실제 추천 계산에 사용할 참여자별 출발지 라벨.
