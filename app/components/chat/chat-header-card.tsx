@@ -95,14 +95,14 @@ export function ChatHeaderCard({
                             variant="outline"
                             onClick={() => {
                                 onOpenLocationMap(
-                                    `${selectedFriend.nickname} 선택 출발 위치`,
-                                    `현재 선택된 저장 출발 위치인 ${selectedFriendDepartureLocation.label} 를 팝업 레이어 안에서 바로 확인합니다.`,
+                                    `${selectedFriend.nickname} 저장 위치`,
+                                    `현재 선택된 저장 친구 위치인 ${selectedFriendDepartureLocation.label} 를 팝업 레이어 안에서 바로 확인합니다.`,
                                     selectedFriendDepartureLocation,
                                 );
                             }}
                             className={`${friendsDisplayFont.className} min-h-10 w-full rounded-[12px] px-3 py-1.5 text-[13px] sm:min-h-[46px] sm:px-5 sm:py-2.5 sm:text-[16px] lg:text-[18px]`}
                         >
-                            선택한 출발 위치 확인
+                            저장된 친구 위치 확인
                         </ChatActionButton>
                     ) : null}
                 </div>
