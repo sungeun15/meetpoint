@@ -11,6 +11,7 @@ export type {
 let kakaoMapPromise: Promise<KakaoMapSdk> | null = null;
 
 function resolveLoadedSdk(resolve: (value: KakaoMapSdk) => void, reject: (reason?: unknown) => void) {
+    // 스크립트가 로드된 뒤에도 window.kakao.maps 가 없으면 초기화 실패로 간주합니다.
     const kakao = window.kakao;
 
     if (!kakao?.maps) {
@@ -35,6 +36,7 @@ export async function loadKakaoMapSdk() {
     }
 
     if (window.kakao?.maps) {
+        // 이미 SDK가 올라와 있으면 기존 인스턴스를 재사용합니다.
         return new Promise<KakaoMapSdk>((resolve, reject) => {
             resolveLoadedSdk(resolve, reject);
         });
@@ -53,6 +55,7 @@ export async function loadKakaoMapSdk() {
             };
 
             if (existingScript) {
+                // 중복 script 태그를 만들지 않고 기존 로딩 이벤트에만 합류합니다.
                 existingScript.addEventListener("load", handleLoad, { once: true });
                 existingScript.addEventListener("error", handleError, { once: true });
                 return;
@@ -66,6 +69,7 @@ export async function loadKakaoMapSdk() {
             script.addEventListener("error", handleError, { once: true });
             document.head.appendChild(script);
         }).catch((error) => {
+            // 로딩 실패 후에는 다음 시도에서 다시 script 로딩을 시작할 수 있게 초기화합니다.
             kakaoMapPromise = null;
             throw error;
         });
