@@ -170,7 +170,7 @@ export function renderConnectionSegments(
             strokeWeight: 5,
             strokeColor: segment.strokeColor,
             strokeOpacity: 0.9,
-            strokeStyle: "solid",
+            strokeStyle: "dash",
             zIndex: 1,
         });
     });
