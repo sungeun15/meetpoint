@@ -13,12 +13,15 @@ import {
     createRecommendationMapScene,
     fitMapToMarkerBounds,
     type KakaoMapSdkInstance,
+    updateRecommendationMapSceneRoutes,
+    updateRecommendationMapSceneSelection,
 } from "./chat-recommendation-map-scene";
-import type { MapMarker } from "../../types";
+import type { MapMarker, RecommendationRouteSegment } from "../../types";
 
 type KakaoMapPreviewProps = {
     markers?: MapMarker[]; // 현재 지도에 보여 줄 마커 목록입니다.
     selectedMarkerId?: string | null; // 강조할 장소 마커 id입니다.
+    routeSegments?: RecommendationRouteSegment[]; // 지도에 함께 그릴 길찾기 경로 목록입니다.
     onMarkerSelect?: (markerId: string) => void; // 장소 마커 선택 이벤트를 상위에 전달합니다.
 };
 
@@ -26,13 +29,18 @@ type KakaoMapPreviewProps = {
 export function KakaoMapPreview({
     markers = [],
     selectedMarkerId = null,
+    routeSegments = [],
     onMarkerSelect,
 }: KakaoMapPreviewProps) {
     // scene 인스턴스와 상위 콜백 참조를 보관해 재렌더 간에도 지도 객체를 제어합니다.
     const mapContainerRef = useRef<HTMLDivElement | null>(null);
     const mapRef = useRef<KakaoMapInstance | null>(null);
     const kakaoRef = useRef<KakaoMapSdkInstance | null>(null);
+    const sceneRef = useRef<Awaited<ReturnType<typeof createRecommendationMapScene>> | null>(null);
     const onMarkerSelectRef = useRef(onMarkerSelect);
+    const selectedMarkerIdRef = useRef(selectedMarkerId);
+    const routeSegmentsRef = useRef(routeSegments);
+    const selectedPlaceFocusLevelRef = useRef<number | null>(null);
     const [status, setStatus] = useState<"loading" | "ready" | "error">("loading");
     const [errorMessage, setErrorMessage] = useState<string | null>(null);
     const [overlayModes, setOverlayModes] = useState<Record<OverlayMode, boolean>>({
@@ -53,6 +61,7 @@ export function KakaoMapPreview({
 
         setIsDraggable(map.getDraggable());
         setIsZoomable(map.getZoomable());
+        selectedPlaceFocusLevelRef.current = map.getLevel();
     }
 
     // 오버레이 토글 UI를 실제 Kakao 지도 오버레이 상태에 반영합니다.
@@ -117,7 +126,15 @@ export function KakaoMapPreview({
         onMarkerSelectRef.current = onMarkerSelect;
     }, [onMarkerSelect]);
 
-    // markers 또는 선택 상태가 바뀌면 scene을 다시 생성해 현재 상태를 반영합니다.
+    useEffect(() => {
+        selectedMarkerIdRef.current = selectedMarkerId;
+    }, [selectedMarkerId]);
+
+    useEffect(() => {
+        routeSegmentsRef.current = routeSegments;
+    }, [routeSegments]);
+
+    // 마커 집합이 바뀔 때만 scene을 다시 생성합니다.
     useEffect(() => {
         let isMounted = true;
         let resizeObserver: ResizeObserver | null = null;
@@ -141,7 +158,9 @@ export function KakaoMapPreview({
                 const scene = await createRecommendationMapScene({
                     container,
                     markers,
-                    selectedMarkerId,
+                    selectedMarkerId: selectedMarkerIdRef.current,
+                    selectedPlaceFocusLevel: selectedPlaceFocusLevelRef.current,
+                    routeSegments: routeSegmentsRef.current,
                     onMarkerSelect: (markerId) => {
                         onMarkerSelectRef.current?.(markerId);
                     },
@@ -153,6 +172,7 @@ export function KakaoMapPreview({
                     return;
                 }
 
+                sceneRef.current = scene;
                 mapRef.current = scene.map;
                 kakaoRef.current = scene.kakao;
                 resizeObserver = scene.resizeObserver;
@@ -173,6 +193,12 @@ export function KakaoMapPreview({
         return () => {
             isMounted = false;
             resizeObserver?.disconnect();
+
+            if (mapRef.current) {
+                selectedPlaceFocusLevelRef.current = mapRef.current.getLevel();
+            }
+
+            sceneRef.current = null;
             mapRef.current = null;
             kakaoRef.current = null;
 
@@ -180,7 +206,30 @@ export function KakaoMapPreview({
                 container.innerHTML = "";
             }
         };
-    }, [markers, selectedMarkerId]);
+    }, [markers]);
+
+    useEffect(() => {
+        if (!sceneRef.current || status !== "ready") {
+            return;
+        }
+
+        updateRecommendationMapSceneSelection({
+            scene: sceneRef.current,
+            selectedMarkerId,
+        });
+        syncMapState();
+    }, [selectedMarkerId, status]);
+
+    useEffect(() => {
+        if (!sceneRef.current || status !== "ready") {
+            return;
+        }
+
+        updateRecommendationMapSceneRoutes({
+            scene: sceneRef.current,
+            routeSegments,
+        });
+    }, [routeSegments, status]);
 
     if (status === "error") {
         return (

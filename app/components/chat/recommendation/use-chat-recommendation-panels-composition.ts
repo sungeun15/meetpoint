@@ -14,6 +14,7 @@ import {
     type RecommendationSelectionStateActions,
     type RecommendationSelectionStateValue,
 } from "./use-chat-recommendation-selection-state";
+import { useChatRecommendationRouteState } from "./use-chat-recommendation-route-state";
 
 export type UseChatRecommendationPanelsCompositionArgs = ChatRecommendationPanelsProps;
 
@@ -37,12 +38,24 @@ export function useChatRecommendationPanelsComposition(
     const {
         activeRecommendationId,
         mapFocusedRecommendationId,
+        selectedPlaceId,
+        selectedTransportMode,
     } = selectionValue;
     const {
         handleRecommendationCardSelect,
         handleMapMarkerSelect,
         handlePlaceChipSelect,
+        handleTransportModeSelect,
     } = selectionActions;
+    const {
+        routeStatus,
+        routeErrorMessage,
+        routeSegments,
+    } = useChatRecommendationRouteState({
+        mapMarkers: props.mapMarkers,
+        selectedPlaceId,
+        selectedTransportMode,
+    });
 
     const departureSettingsSectionProps = buildRecommendationDepartureSettingsSectionProps({
         panelKey: `${props.selectedFriendName}:${props.departureInputMethod}`,
@@ -58,8 +71,14 @@ export function useChatRecommendationPanelsComposition(
         ...mapCompositionArgs,
         activeMarkerId: activeRecommendationId,
         focusedMarkerId: mapFocusedRecommendationId,
+        selectedPlaceId,
+        selectedTransportMode,
+        routeStatus,
+        routeErrorMessage,
+        routeSegments,
         onMarkerSelect: handleMapMarkerSelect,
         onPlaceChipSelect: handlePlaceChipSelect,
+        onTransportModeSelect: handleTransportModeSelect,
     });
 
     return buildChatRecommendationPanelsCompositionResult({

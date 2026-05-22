@@ -14,10 +14,17 @@ import type { MapMarker } from "../../types";
 export type KakaoLatLngInstance = InstanceType<KakaoMapSdkInstance["maps"]["LatLng"]>;
 type KakaoMarkerSceneInstance = InstanceType<KakaoMapSdkInstance["maps"]["Marker"]>;
 
+type PlaceMarkerSceneEntry = {
+    markerInstance: KakaoMarkerSceneInstance;
+    markerData: MapMarker;
+    position: KakaoLatLngInstance;
+};
+
 export type RenderMarkersResult = {
     selectedPlaceMarkerInstance: KakaoMarkerSceneInstance | null; // 선택된 장소 마커의 Kakao Marker 인스턴스입니다.
     selectedPlaceMarkerData: MapMarker | null; // 선택된 장소 마커의 원본 데이터입니다.
     selectedPlaceMarkerPosition: KakaoLatLngInstance | null; // 선택된 장소 마커의 좌표입니다.
+    placeMarkerEntriesById: Map<string, PlaceMarkerSceneEntry>; // 장소 마커 id별 인스턴스와 좌표를 보관합니다.
 };
 
 function resolveMarkerZIndex(marker: MapMarker) {
@@ -74,6 +81,7 @@ export function renderMarkers(
     let selectedPlaceMarkerInstance: KakaoMarkerSceneInstance | null = null;
     let selectedPlaceMarkerData: MapMarker | null = null;
     let selectedPlaceMarkerPosition: KakaoLatLngInstance | null = null;
+    const placeMarkerEntriesById = new Map<string, PlaceMarkerSceneEntry>();
     const overlappingPersonMarkerGroups = buildOverlappingPersonMarkerGroups(markers);
     const renderedPersonGroupKeys = new Set<string>();
 
@@ -141,19 +149,59 @@ export function renderMarkers(
             selectedPlaceMarkerData = marker;
             selectedPlaceMarkerPosition = position;
         }
+
+        if (marker.markerType === "place") {
+            placeMarkerEntriesById.set(marker.id, {
+                markerInstance,
+                markerData: marker,
+                position,
+            });
+        }
     });
 
     return {
         selectedPlaceMarkerInstance,
         selectedPlaceMarkerData,
         selectedPlaceMarkerPosition,
+        placeMarkerEntriesById,
     };
+}
+
+type FocusSelectedMarkerArgs = {
+    map: KakaoMapInstance;
+    infoWindow: InstanceType<KakaoMapSdkInstance["maps"]["InfoWindow"]>;
+    renderedMarkers: RenderMarkersResult;
+    selectedMarkerId: string | null;
+};
+
+export function focusSelectedMarker({
+    map,
+    infoWindow,
+    renderedMarkers,
+    selectedMarkerId,
+}: FocusSelectedMarkerArgs) {
+    if (!selectedMarkerId) {
+        return null;
+    }
+
+    const selectedMarkerEntry = renderedMarkers.placeMarkerEntriesById.get(selectedMarkerId);
+
+    if (!selectedMarkerEntry) {
+        return null;
+    }
+
+    infoWindow.setContent(buildInfoWindowContent(selectedMarkerEntry.markerData));
+    infoWindow.open(map, selectedMarkerEntry.markerInstance);
+    map.setCenter(selectedMarkerEntry.position);
+
+    return selectedMarkerEntry.position;
 }
 
 type ApplySelectedMarkerFocusArgs = {
     map: KakaoMapInstance; // 포커스를 실제로 적용할 지도 인스턴스입니다.
     renderedMarkers: RenderMarkersResult; // 마커 렌더 결과에서 선택된 장소 마커 정보를 담고 있습니다.
     infoWindow: InstanceType<KakaoMapSdkInstance["maps"]["InfoWindow"]>; // 선택된 마커 설명을 띄울 InfoWindow 인스턴스입니다.
+    selectedPlaceFocusLevel: number; // 선택된 장소를 다시 포커스할 때 유지할 줌 레벨입니다.
 };
 
 // 선택된 장소 마커가 있으면 초기 InfoWindow와 포커스를 그 위치에 맞춥니다.
@@ -161,6 +209,7 @@ export function applySelectedMarkerInitialFocus({
     map,
     renderedMarkers,
     infoWindow,
+    selectedPlaceFocusLevel,
 }: ApplySelectedMarkerFocusArgs) {
     if (renderedMarkers.selectedPlaceMarkerInstance && renderedMarkers.selectedPlaceMarkerData) {
         infoWindow.setContent(buildInfoWindowContent(renderedMarkers.selectedPlaceMarkerData));
@@ -170,7 +219,7 @@ export function applySelectedMarkerInitialFocus({
     // 선택 장소가 있으면 초기 진입 시 바로 해당 카드/마커를 중심으로 확대합니다.
     if (renderedMarkers.selectedPlaceMarkerPosition) {
         map.setCenter(renderedMarkers.selectedPlaceMarkerPosition);
-        map.setLevel(3, { animate: { duration: 250 } });
+        map.setLevel(selectedPlaceFocusLevel, { animate: { duration: 250 } });
     }
 
     return renderedMarkers.selectedPlaceMarkerPosition;
