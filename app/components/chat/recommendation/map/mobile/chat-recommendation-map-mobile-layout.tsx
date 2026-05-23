@@ -127,6 +127,7 @@ export function ChatRecommendationMapMobileLayout({
                                 selectedMarkerId={focusedMarkerId}
                                 routeSegments={routeCardProps.routeStatus === "ready" ? routeCardProps.routeSegments : []}
                                 onMarkerSelect={handleMobileMarkerSelect}
+                                layout="fill"
                             />
                         </div>
 

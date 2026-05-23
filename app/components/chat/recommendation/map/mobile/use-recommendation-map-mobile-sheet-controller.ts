@@ -9,7 +9,7 @@ const SHEET_SWIPE_THRESHOLD = 36;
 // 모바일 전체화면 지도 위의 하단 시트를 collapsed/half/expanded 상태로 제어합니다.
 export function useRecommendationMapMobileSheetController() {
     const dragStartYRef = useRef<number | null>(null);
-    const [sheetState, setSheetState] = useState<RecommendationMapMobileSheetState>("half");
+    const [sheetState, setSheetState] = useState<RecommendationMapMobileSheetState>("collapsed");
 
     const handlePointerDown = useCallback((event: React.PointerEvent<HTMLDivElement>) => {
         dragStartYRef.current = event.clientY;
