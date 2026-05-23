@@ -1,19 +1,29 @@
 type KakaoKeywordSearchDocument = {
+    // 장소 고유 id 입니다.
     id: string;
+    // 장소명입니다.
     place_name: string;
+    // Kakao가 반환한 전체 카테고리 경로입니다.
     category_name: string;
+    // 대표 카테고리 그룹 코드입니다.
     category_group_code: string;
+    // 지번 주소입니다.
     address_name: string;
+    // 도로명 주소입니다.
     road_address_name: string;
+    // 경도 문자열입니다.
     x: string;
+    // 위도 문자열입니다.
     y: string;
 };
 
 type KakaoKeywordSearchResponse = {
+    // 키워드 검색 결과 문서 목록입니다.
     documents: KakaoKeywordSearchDocument[];
 };
 
 type KakaoCategorySearchResponse = {
+    // 카테고리 검색 결과 문서 목록입니다.
     documents: KakaoKeywordSearchDocument[];
 };
 
@@ -25,18 +35,28 @@ const CATEGORY_GROUP_CODE_MAP = {
 const FUN_KEYWORD_QUERIES = ["영화관", "노래방", "보드게임", "볼링장", "방탈출", "문화시설"] as const;
 
 export type DepartureSearchItem = {
+    // 검색 결과 목록에 보여줄 라벨입니다.
     label: string;
+    // later 출발지 검색에서 생성된 항목임을 구분합니다.
     source: "search";
+    // 검색 결과 위도입니다.
     lat: number;
+    // 검색 결과 경도입니다.
     lng: number;
 };
 
 export type KakaoPlaceCandidate = {
+    // 추천 후보 장소명입니다.
     name: string;
+    // 정규화된 카테고리 문자열입니다.
     category: string;
+    // 장소 위도입니다.
     lat: number;
+    // 장소 경도입니다.
     lng: number;
+    // 화면 표시용 주소입니다.
     address: string;
+    // Kakao 카테고리 그룹 코드입니다.
     categoryGroupCode: string;
 };
 
@@ -48,6 +68,7 @@ export class KakaoLocalApiError extends Error {
 }
 
 function normalizeKakaoPlace(document: KakaoKeywordSearchDocument): KakaoPlaceCandidate | null {
+    // Kakao 응답 좌표는 문자열이므로 숫자로 변환한 뒤 유효성까지 확인합니다.
     const lat = Number(document.y);
     const lng = Number(document.x);
 
@@ -76,6 +97,7 @@ function getKakaoLocalRestApiKey() {
 }
 
 async function requestKakaoLocal<T>(url: URL) {
+    // 공통 fetch 래퍼에서 인증 헤더와 JSON 파싱 오류 처리를 함께 담당합니다.
     const response = await fetch(url, {
         headers: {
             Authorization: `KakaoAK ${getKakaoLocalRestApiKey()}`,
@@ -132,10 +154,15 @@ export async function searchPlacesByKeyword(
 }
 
 async function searchPlacesByCategoryGroup(input: {
+    // Kakao 카테고리 그룹 코드입니다.
     categoryGroupCode: string;
+    // 검색 중심점 위도입니다.
     lat: number;
+    // 검색 중심점 경도입니다.
     lng: number;
+    // 검색 반경(m)입니다.
     radius: number;
+    // 최대 반환 개수입니다.
     size: number;
 }) {
     const url = new URL("https://dapi.kakao.com/v2/local/search/category.json");
@@ -157,6 +184,7 @@ async function searchPlacesByCategoryGroup(input: {
 }
 
 function dedupeCandidates(candidates: KakaoPlaceCandidate[]) {
+    // 같은 장소명이더라도 좌표가 다르면 별개 후보로 유지합니다.
     const uniqueCandidates = new Map<string, KakaoPlaceCandidate>();
 
     candidates.forEach((candidate) => {
@@ -171,12 +199,17 @@ function dedupeCandidates(candidates: KakaoPlaceCandidate[]) {
 
 // 추천 반경 검색은 category 기준으로 Kakao Local 후보를 정규화해 반환한다.
 export async function fetchPlaceCandidatesByRadius(input: {
+    // 추천 중심점입니다.
     midpoint: { lat: number; lng: number };
+    // 추천 카테고리입니다.
     category: "cafe" | "meal" | "fun";
+    // 검색 반경(m)입니다.
     radius: number;
+    // 최대 후보 개수입니다.
     size: number;
 }) {
     if (input.category === "fun") {
+        // 놀거리 카테고리는 단일 그룹 코드가 부족해서 다중 키워드 검색 결과를 합칩니다.
         const candidateGroups = await Promise.all(
             FUN_KEYWORD_QUERIES.map((keyword) =>
                 searchPlacesByKeyword(keyword, Math.max(3, Math.ceil(input.size / 2)), {

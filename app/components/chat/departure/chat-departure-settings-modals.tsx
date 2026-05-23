@@ -56,11 +56,6 @@ export function PostcodeSearchModal({
             onClose={onClose}
             panelClassName="max-w-180"
             contentClassName="px-3 py-3 sm:px-5 sm:py-5"
-            notice={(
-                <p className={`${friendsBodyFont.className} text-[12px] leading-[1.55] text-[#5f6782] sm:text-[13px]`}>
-                    팝업 대신 화면 안 레이어를 쓰기 때문에 모바일과 웹뷰 환경에서도 더 안전하게 동작합니다.
-                </p>
-            )}
         >
             <div
                 ref={containerRef}

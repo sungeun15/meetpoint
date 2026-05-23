@@ -1,21 +1,12 @@
 import { loadKakaoMapSdk } from "@/lib/kakao/map-loader";
 
+import { resolvePlaceMarkerPalette } from "./place-marker-palette";
 import type { DepartureParty, MapMarker } from "../../types";
 
 // Kakao SDK 타입을 marker image 생성 함수에서 재사용하기 위한 별칭입니다.
 type KakaoSdk = Awaited<ReturnType<typeof loadKakaoMapSdk>>;
 
 type PersonMarkerVariant = DepartureParty | "me" | "friend";
-
-// 추천 장소 마커마다 순환 적용할 색상 팔레트 모음입니다.
-const placeMarkerPalettes = [
-    { primaryColor: "#FF8A65", secondaryColor: "#FFB199", accentColor: "#9A3412" },
-    { primaryColor: "#5B8CFF", secondaryColor: "#A5C8FF", accentColor: "#1D4ED8" },
-    { primaryColor: "#8B5CF6", secondaryColor: "#C4B5FD", accentColor: "#6D28D9" },
-    { primaryColor: "#10B981", secondaryColor: "#86EFAC", accentColor: "#047857" },
-    { primaryColor: "#F59E0B", secondaryColor: "#FCD34D", accentColor: "#B45309" },
-    { primaryColor: "#EC4899", secondaryColor: "#F9A8D4", accentColor: "#BE185D" },
-];
 
 // 사람 위치 마커용 SVG data URL을 생성합니다.
 function createPersonMarkerSvg(primaryColor: string, accentColor: string) {
@@ -73,18 +64,12 @@ function createMidpointMarkerSvg() {
     `)}`;
 }
 
-// 마커 id를 기반으로 일정한 색상 팔레트가 선택되도록 간단한 해시를 계산합니다.
-function hashMarkerId(value: string) {
-    return value.split("").reduce((accumulator, character) => accumulator + character.charCodeAt(0), 0);
-}
-
-// 장소 마커마다 고정된 색 조합이 나오도록 팔레트를 선택합니다.
-function getPlaceMarkerPalette(markerId: string) {
-    return placeMarkerPalettes[hashMarkerId(markerId) % placeMarkerPalettes.length];
-}
-
-// 마커 id 끝 숫자를 우선 사용하고, 없으면 이름 첫 글자를 뱃지로 사용합니다.
+// 추천 순위가 있으면 우선 사용하고, 없으면 id 끝 숫자 또는 이름 첫 글자를 뱃지로 사용합니다.
 function extractMarkerBadge(marker: MapMarker) {
+    if (typeof marker.rank === "number" && marker.rank > 0) {
+        return String(marker.rank);
+    }
+
     const rankMatch = marker.id.match(/(\d+)$/);
 
     if (rankMatch) {
@@ -103,7 +88,7 @@ function extractMarkerMonogram(marker: MapMarker) {
 
 // 추천 장소 전용 SVG 마커를 생성합니다.
 function createPlaceMarkerSvg(marker: MapMarker) {
-    const { primaryColor, secondaryColor, accentColor } = getPlaceMarkerPalette(marker.id);
+    const { primaryColor, secondaryColor, accentColor } = resolvePlaceMarkerPalette(marker);
     const badgeLabel = extractMarkerBadge(marker);
     const monogram = extractMarkerMonogram(marker);
 

@@ -1,6 +1,6 @@
 import type { LocationShareScope } from "@/lib/contracts/friends";
 
-import { formatLocationPreview } from "../data";
+import { buildCoordinatePreviewAddress } from "../chat-coordinate-address-helpers";
 import type { ResolvedLocation } from "../types";
 
 type LocationShareCopy = {
@@ -36,19 +36,19 @@ export function getMissingLocationShareTargetMessage(scope: LocationShareScope, 
     return null;
 }
 
-export function buildBrowserSharedLocation(latitude: number, longitude: number): ResolvedLocation {
+export function buildBrowserSharedLocation(latitude: number, longitude: number, address?: string): ResolvedLocation {
     return {
         label: "내 현재 위치",
-        address: `브라우저 현재 위치 · ${formatLocationPreview({ latitude, longitude })}`,
+        address: address?.trim() || buildCoordinatePreviewAddress("브라우저 현재 위치", latitude, longitude),
         latitude,
         longitude,
     };
 }
 
-export function buildStoredSharedLocation(latitude: number, longitude: number): ResolvedLocation {
+export function buildStoredSharedLocation(latitude: number, longitude: number, address?: string): ResolvedLocation {
     return {
         label: "내 현재 위치",
-        address: `공유한 위치 · ${formatLocationPreview({ latitude, longitude })}`,
+        address: address?.trim() || buildCoordinatePreviewAddress("공유한 위치", latitude, longitude),
         latitude,
         longitude,
     };

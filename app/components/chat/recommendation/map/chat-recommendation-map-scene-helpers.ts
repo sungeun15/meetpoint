@@ -7,10 +7,12 @@ import {
     createPersonMarkerImage,
     createPlaceMarkerImage,
 } from "./kakao-marker-icons";
-import type { MapMarker } from "../../types";
+import type { MapMarker, RecommendationRouteSegment } from "../../types";
 
 export type KakaoMapSdkInstance = Awaited<ReturnType<typeof loadKakaoMapSdk>>;
 export { createPersonGroupMarkerImage };
+
+export type KakaoPolylineSceneInstance = InstanceType<KakaoMapSdkInstance["maps"]["Polyline"]>;
 
 type ConnectionSegment = {
     path: ReturnType<typeof buildCurvedSegmentPath>; // 지도에 그릴 곡선 경로 좌표입니다.
@@ -71,11 +73,11 @@ function buildConnectionSegments(kakao: KakaoMapSdkInstance, markers: MapMarker[
     return [
         {
             path: buildCurvedSegmentPath(kakao, meMarker, midpointMarker, -1),
-            strokeColor: "#4F7CFF",
+            strokeColor: "#9DB8FF",
         },
         {
             path: buildCurvedSegmentPath(kakao, midpointMarker, friendMarker, 1),
-            strokeColor: "#7C4DFF",
+            strokeColor: "#B79CFF",
         },
     ];
 }
@@ -142,8 +144,8 @@ export function resolveMapCenter(kakao: KakaoMapSdkInstance, markers: MapMarker[
 
 // Kakao 기본 지도 컨트롤과 공통 옵션을 세팅합니다.
 export function configureMap(map: KakaoMapInstance, kakao: KakaoMapSdkInstance) {
-    map.setMinLevel(2);
-    map.setMaxLevel(9);
+    map.setMinLevel(1);
+    map.setMaxLevel(14);
     map.setKeyboardShortcuts(true);
     map.setCopyrightPosition(kakao.maps.CopyrightPosition.BOTTOMRIGHT, true);
     map.setCursor("grab");
@@ -163,15 +165,71 @@ export function renderConnectionSegments(
     const connectionSegments = buildConnectionSegments(kakao, markers);
 
     // 내 위치-중심점, 중심점-친구 위치를 서로 다른 색의 곡선으로 시각화합니다.
-    connectionSegments.forEach((segment) => {
-        new kakao.maps.Polyline({
-            map,
-            path: segment.path,
+    return connectionSegments.map((segment) => new kakao.maps.Polyline({
+        map,
+        path: segment.path,
+        strokeWeight: 5,
+        strokeColor: segment.strokeColor,
+        strokeOpacity: 0.9,
+        strokeStyle: "dash",
+        zIndex: 1,
+    }));
+}
+
+function resolveRouteStrokeStyle(segment: RecommendationRouteSegment) {
+    const strokeColor = segment.owner === "me" ? "#2563EB" : "#7C3AED";
+
+    if (segment.mode === "bus") {
+        return {
+            strokeColor,
+            strokeStyle: "solid" as const,
+            strokeWeight: 6,
+        };
+    }
+
+    if (segment.mode === "bike") {
+        return {
+            strokeColor,
+            strokeStyle: "solid" as const,
             strokeWeight: 5,
-            strokeColor: segment.strokeColor,
-            strokeOpacity: 0.9,
-            strokeStyle: "solid",
-            zIndex: 1,
-        });
+        };
+    }
+
+    if (segment.mode === "walk") {
+        return {
+            strokeColor,
+            strokeStyle: "solid" as const,
+            strokeWeight: 4,
+        };
+    }
+
+    return {
+        strokeColor,
+        strokeStyle: "solid" as const,
+        strokeWeight: 6,
+    };
+}
+
+export function renderRecommendationRouteSegments(
+    map: KakaoMapInstance,
+    kakao: KakaoMapSdkInstance,
+    routeSegments: RecommendationRouteSegment[],
+) {
+    return routeSegments.flatMap((segment) => {
+        if (segment.path.length < 2) {
+            return [];
+        }
+
+        const routeStyle = resolveRouteStrokeStyle(segment);
+
+        return [new kakao.maps.Polyline({
+            map,
+            path: segment.path.map((point) => new kakao.maps.LatLng(point.latitude, point.longitude)),
+            strokeWeight: routeStyle.strokeWeight,
+            strokeColor: routeStyle.strokeColor,
+            strokeOpacity: 0.88,
+            strokeStyle: routeStyle.strokeStyle,
+            zIndex: 3,
+        })];
     });
 }

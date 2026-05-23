@@ -1,3 +1,4 @@
+import { resolveCoordinateDisplayAddress } from "../../chat-coordinate-address-helpers";
 import {
     buildMapMarkers,
     buildRecommendationSummary,
@@ -63,7 +64,7 @@ function metersToKilometers(distanceMeters: number) {
     return distanceMeters / 1000;
 }
 
-export function buildRecommendationSnapshotFromApi({
+export async function buildRecommendationSnapshotFromApi({
     response,
     meetingMode,
     selectedCategory,
@@ -71,25 +72,32 @@ export function buildRecommendationSnapshotFromApi({
     myOrigin,
     friendOrigin,
     selectedDepartureLabels,
-}: BuildRecommendationSnapshotFromApiArgs): RecommendationSnapshot {
+}: BuildRecommendationSnapshotFromApiArgs): Promise<RecommendationSnapshot> {
     const midpoint = {
         latitude: response.midpoint.lat,
         longitude: response.midpoint.lng,
     };
     // API 응답의 거리 단위(m)를 기존 카드 UI가 기대하는 km 문자열 형식으로 맞춥니다.
-    const cards = response.places.map((place, index) => ({
-        id: `${friendName}-${place.name}-${index + 1}`,
-        rank: index + 1,
-        name: place.name,
-        category: place.category,
-        address: `위도 ${place.lat.toFixed(4)} · 경도 ${place.lng.toFixed(4)}`,
-        myDistance: formatRecommendationDistance(metersToKilometers(place.distanceA)),
-        friendDistance: formatRecommendationDistance(metersToKilometers(place.distanceB)),
-        myDrivingEstimate: formatDrivingEstimate(metersToKilometers(place.distanceA)),
-        friendDrivingEstimate: formatDrivingEstimate(metersToKilometers(place.distanceB)),
-        latitude: place.lat,
-        longitude: place.lng,
-        scoreLabel: formatRecommendationScoreLabel(place.score),
+    const cards = await Promise.all(response.places.map(async (place, index) => {
+        const resolvedAddress = await resolveCoordinateDisplayAddress({
+            latitude: place.lat,
+            longitude: place.lng,
+        });
+
+        return {
+            id: `${friendName}-${place.name}-${index + 1}`,
+            rank: index + 1,
+            name: place.name,
+            category: place.category,
+            address: resolvedAddress,
+            myDistance: formatRecommendationDistance(metersToKilometers(place.distanceA)),
+            friendDistance: formatRecommendationDistance(metersToKilometers(place.distanceB)),
+            myDrivingEstimate: formatDrivingEstimate(metersToKilometers(place.distanceA)),
+            friendDrivingEstimate: formatDrivingEstimate(metersToKilometers(place.distanceB)),
+            latitude: place.lat,
+            longitude: place.lng,
+            scoreLabel: formatRecommendationScoreLabel(place.score),
+        };
     }));
     // now/later 모드에 따라 요약문에 노출할 출발지 기준 문구를 달리 구성합니다.
     const summary = buildRecommendationSummary({

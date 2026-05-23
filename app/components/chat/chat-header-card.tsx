@@ -141,7 +141,7 @@ export function ChatHeaderCard({
                     </div>
                 </div>
 
-                <div className="grid w-full gap-2 sm:w-auto xl:min-w-58 xl:shrink-0">
+                <div className={`${isMobileHeaderCollapsed ? "hidden" : "grid"} w-full gap-2 sm:w-auto sm:grid xl:min-w-58 xl:shrink-0`}>
                     <ChatActionButton
                         variant="outline"
                         onClick={handleOpenFriendLocationMap}

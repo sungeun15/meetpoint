@@ -1,3 +1,10 @@
+import type {
+    RecommendationRoutePathPoint,
+    RecommendationRouteResponseData,
+    RecommendationRouteSegment,
+    RecommendationRouteTransportMode,
+} from "@/lib/contracts/recommendation-routes";
+
 export type ChatMessage = {
     id: string;
     friendId: string;
@@ -47,7 +54,9 @@ export type MapMarker = LocationPoint & {
     id: string;
     label: string;
     description: string;
+    address?: string;
     placeCategory?: string;
+    rank?: number;
     markerType: "person" | "place" | "midpoint";
 };
 
@@ -78,4 +87,14 @@ export type RecommendationSnapshot = {
     summary: RecommendationSummary;
     cards: RecommendationCard[];
     markers: MapMarker[];
+};
+
+export type RecommendationTransportMode = RecommendationRouteTransportMode;
+
+export type RecommendationRouteStatus = "idle" | "loading" | "ready" | "error";
+
+export type {
+    RecommendationRoutePathPoint,
+    RecommendationRouteResponseData,
+    RecommendationRouteSegment,
 };

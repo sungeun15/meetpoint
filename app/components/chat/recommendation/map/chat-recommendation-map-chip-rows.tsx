@@ -8,6 +8,10 @@ const chipRowClassName = "flex w-full min-w-0 gap-1.5 overflow-x-auto overflow-y
 const dragThresholdPx = 6;
 const horizontalScrollHintCopy = "휠 또는 드래그로 좌우 이동";
 
+function isInteractiveChipTarget(target: EventTarget | null) {
+    return target instanceof HTMLElement && Boolean(target.closest("button, a, input, textarea, select, [role='button']"));
+}
+
 // 세로 휠 입력을 가로 스크롤 이동으로 변환해 칩 행 탐색을 쉽게 만듭니다.
 function handleChipRowWheel(event: WheelEvent<HTMLDivElement>) {
     const scrollContainer = event.currentTarget;
@@ -38,7 +42,7 @@ function useHorizontalDragScroll() {
     function handlePointerDown(event: PointerEvent<HTMLDivElement>) {
         const scrollContainer = scrollContainerRef.current;
 
-        if (!scrollContainer || scrollContainer.scrollWidth <= scrollContainer.clientWidth) {
+        if (!scrollContainer || scrollContainer.scrollWidth <= scrollContainer.clientWidth || isInteractiveChipTarget(event.target)) {
             return;
         }
 

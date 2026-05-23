@@ -3,6 +3,7 @@ import { useEffect, useMemo, useState } from "react";
 
 import type { LocationShareScope } from "@/lib/contracts/friends";
 
+import { resolveCoordinateDisplayAddress } from "../chat-coordinate-address-helpers";
 import {
     buildBrowserSharedLocation,
     buildManualSharedLocation,
@@ -106,8 +107,14 @@ export function useChatScreenLocationState({
                     return;
                 }
 
+                const resolvedAddress = await resolveCoordinateDisplayAddress({
+                    latitude: result.data.location.lat,
+                    longitude: result.data.location.lng,
+                    fallbackPrefix: "공유한 위치",
+                });
+
                 setMySharedLocation({
-                    ...buildStoredSharedLocation(result.data.location.lat, result.data.location.lng),
+                    ...buildStoredSharedLocation(result.data.location.lat, result.data.location.lng, resolvedAddress),
                     sharedAt: formatLocationUpdatedLabel(result.data.location.locationUpdatedAt) ?? "최근",
                     shareScope: result.data.locationShareScope,
                     sharedFriendId: result.data.locationShareTargetUserId,
@@ -215,7 +222,16 @@ export function useChatScreenLocationState({
 
         navigator.geolocation.getCurrentPosition(
             async (position) => {
-                await persistSharedLocation(scope, buildBrowserSharedLocation(position.coords.latitude, position.coords.longitude));
+                const resolvedAddress = await resolveCoordinateDisplayAddress({
+                    latitude: position.coords.latitude,
+                    longitude: position.coords.longitude,
+                    fallbackPrefix: "브라우저 현재 위치",
+                });
+
+                await persistSharedLocation(
+                    scope,
+                    buildBrowserSharedLocation(position.coords.latitude, position.coords.longitude, resolvedAddress),
+                );
             },
             (error) => {
                 setFeedbackMessage(getLocationShareGeolocationErrorMessage(error.code));

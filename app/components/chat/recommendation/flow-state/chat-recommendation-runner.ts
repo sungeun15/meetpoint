@@ -121,7 +121,7 @@ export async function runRecommendationFlow({
 
     return {
         status: "ok",
-        snapshot: buildRecommendationSnapshotFromApi({
+        snapshot: await buildRecommendationSnapshotFromApi({
             response: recommendationResult.data,
             meetingMode,
             selectedCategory,

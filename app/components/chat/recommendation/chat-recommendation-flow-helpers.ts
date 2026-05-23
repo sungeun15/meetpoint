@@ -337,8 +337,14 @@ export function buildChatRecommendationMapPanelProps({
     mapMarkers,
     activeMarkerId,
     focusedMarkerId,
+    selectedPlaceId,
+    selectedTransportMode,
+    routeStatus,
+    routeErrorMessage,
+    routeSegments,
     onMarkerSelect,
     onPlaceChipSelect,
+    onTransportModeSelect,
 }: BuildChatRecommendationMapPanelPropsArgs): BuildChatRecommendationMapPanelPropsResult {
     return {
         recommendationSummary,
@@ -346,8 +352,14 @@ export function buildChatRecommendationMapPanelProps({
         mapMarkers,
         activeMarkerId,
         focusedMarkerId,
+        selectedPlaceId,
+        selectedTransportMode,
+        routeStatus,
+        routeErrorMessage,
+        routeSegments,
         onMarkerSelect,
         onPlaceChipSelect,
+        onTransportModeSelect,
     };
 }
 
