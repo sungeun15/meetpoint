@@ -2,7 +2,7 @@
 
 import { createPortal } from "react-dom";
 
-import { friendsBodyFont, friendsDisplayFont, friendsHeadingFont } from "../../../../friends/fonts";
+import { friendsDisplayFont, friendsHeadingFont } from "../../../../friends/fonts";
 import { RecommendationModeBadge } from "../../chat-recommendation-shared";
 import { ChatRecommendationMapSelectedPlaceCard } from "../chat-recommendation-map-selected-place-card";
 import { KakaoMapPreview } from "../kakao-map-preview";
@@ -93,25 +93,22 @@ export function ChatRecommendationMapMobileLayout({
     return createPortal(
         <div className="fixed inset-0 z-150 bg-[#eef2ff] lg:hidden">
             <div className="flex h-full flex-col bg-[radial-gradient(circle_at_top,rgba(215,223,255,0.95),rgba(238,242,255,0.98)_36%,rgba(248,250,252,0.98)_100%)]">
-                <div className="px-4 pb-3 pt-[calc(env(safe-area-inset-top)+12px)]">
-                    <div className="flex items-start justify-between gap-3 rounded-3xl bg-white/86 px-4 py-3 shadow-[0px_18px_40px_rgba(67,56,202,0.14)] backdrop-blur">
+                <div className="px-4 pb-1.5 pt-[calc(env(safe-area-inset-top)+6px)]">
+                    <div className="flex items-start justify-between gap-2 rounded-[22px] bg-white/84 px-3 py-2 shadow-[0px_16px_34px_rgba(67,56,202,0.12)] backdrop-blur">
                         <div className="min-w-0">
-                            <p className={`${friendsDisplayFont.className} text-[12px] text-[#5f6782]`}>
+                            <p className={`${friendsDisplayFont.className} text-[10px] text-[#5f6782]`}>
                                 {recommendationSummary.modeLabel}
                             </p>
-                            <p className={`${friendsHeadingFont.className} mt-1 text-[18px] text-[#111827]`}>
+                            <p className={`${friendsHeadingFont.className} mt-0.5 text-[15px] text-[#111827]`}>
                                 {presenter.title}
                             </p>
-                            <p className={`${friendsBodyFont.className} mt-1 text-[12px] leading-normal text-[#5f6782]`}>
-                                {presenter.copy}
-                            </p>
                         </div>
-                        <div className="flex shrink-0 items-center gap-2">
+                        <div className="flex shrink-0 items-center gap-1.5">
                             <RecommendationModeBadge modeLabel={recommendationSummary.modeLabel} emphasized />
                             <button
                                 type="button"
                                 onClick={onClose}
-                                className={`${friendsDisplayFont.className} inline-flex min-h-10 items-center rounded-full border border-[#d9d4ff] bg-white px-3 py-1.5 text-[11px] text-[#544b88]`}
+                                className={`${friendsDisplayFont.className} inline-flex min-h-8 items-center rounded-full border border-[#d9d4ff] bg-white px-2 py-1 text-[10px] text-[#544b88]`}
                             >
                                 닫기
                             </button>

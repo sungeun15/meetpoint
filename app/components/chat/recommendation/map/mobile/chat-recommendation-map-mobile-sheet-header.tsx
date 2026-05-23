@@ -1,4 +1,4 @@
-import { friendsBodyFont, friendsDisplayFont, friendsHeadingFont } from "../../../../friends/fonts";
+import { friendsDisplayFont, friendsHeadingFont } from "../../../../friends/fonts";
 
 import type { RecommendationMapMobileSheetState } from "./use-recommendation-map-mobile-sheet-controller";
 
@@ -45,24 +45,16 @@ function buildSheetTitle(sheetState: RecommendationMapMobileSheetState) {
     return "추천 장소와 길찾기 확인";
 }
 
-function buildSheetDescription(sheetState: RecommendationMapMobileSheetState) {
-    if (sheetState === "collapsed") {
-        return "지도를 더 넓게 보다가 필요할 때 바로 중간 상태로 올릴 수 있습니다.";
-    }
-
-    return "핸들을 드래그하거나 보기 버튼으로 시트 높이를 조절할 수 있습니다.";
-}
-
 export function buildSheetTopClassName(sheetState: RecommendationMapMobileSheetState) {
     if (sheetState === "expanded") {
         return "top-[14%]";
     }
 
     if (sheetState === "collapsed") {
-        return "top-[82%]";
+        return "top-[88%]";
     }
 
-    return "top-[48%]";
+    return "top-[64%]";
 }
 
 export function ChatRecommendationMapMobileSheetHeader({
@@ -77,21 +69,17 @@ export function ChatRecommendationMapMobileSheetHeader({
 }: ChatRecommendationMapMobileSheetHeaderProps) {
     return (
         <>
-            <div
-                className="mx-auto mb-3 h-1.5 w-12 rounded-full bg-[#d9d4ff] touch-none"
+            <div className="mx-auto mb-2 h-1.5 w-11 rounded-full bg-[#d9d4ff] touch-none"
                 onPointerDown={onPointerDown}
                 onPointerMove={onPointerMove}
                 onPointerUp={onPointerUp}
                 onPointerCancel={onPointerCancel}
             />
 
-            <div className="mb-3 flex items-start justify-between gap-3">
+            <div className="mb-2 flex items-start justify-between gap-2">
                 <div>
-                    <p className={`${friendsHeadingFont.className} text-[14px] text-[#1d114f]`}>
+                    <p className={`${friendsHeadingFont.className} text-[13px] text-[#1d114f]`}>
                         {buildSheetTitle(sheetState)}
-                    </p>
-                    <p className={`${friendsBodyFont.className} mt-1 text-[11px] text-[#6a6690]`}>
-                        {buildSheetDescription(sheetState)}
                     </p>
                 </div>
 
