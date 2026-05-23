@@ -10,5 +10,5 @@ export function buildRecommendationCardListContainerClassName({
     hasMobileCollapsedCards,
     hasRecommendationOverflow,
 }: BuildRecommendationCardListContainerClassNameArgs) {
-    return `mt-2.5 grid gap-1.5 ${isMobileListExpanded && hasMobileCollapsedCards ? "max-h-[18rem] overflow-y-auto pr-1.5" : ""} ${hasRecommendationOverflow ? "sm:mt-3 sm:max-h-[28rem] sm:gap-2.5 sm:overflow-y-auto sm:pr-2 2xl:max-h-[30rem]" : "sm:mt-3 sm:gap-2.5"}`;
+    return `mt-2.5 grid gap-1.5 ${isMobileListExpanded && hasMobileCollapsedCards ? "max-h-[18rem] overflow-y-auto pr-1.5" : ""} ${hasRecommendationOverflow ? "sm:mt-3 sm:max-h-[30rem] sm:gap-2.5 sm:overflow-y-auto sm:pr-2 2xl:max-h-[32rem]" : "sm:mt-3 sm:gap-2.5"}`;
 }

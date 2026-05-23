@@ -56,6 +56,7 @@ export type MapMarker = LocationPoint & {
     description: string;
     address?: string;
     placeCategory?: string;
+    rank?: number;
     markerType: "person" | "place" | "midpoint";
 };
 

@@ -180,6 +180,7 @@ export function buildMapMarkers({
             description: `${recommendationCard.category} · ${recommendationCard.scoreLabel}`,
             address: recommendationCard.address,
             placeCategory: recommendationCard.category,
+            rank: recommendationCard.rank,
             latitude: recommendationCard.latitude,
             longitude: recommendationCard.longitude,
             markerType: "place",
