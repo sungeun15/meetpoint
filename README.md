@@ -46,6 +46,7 @@ SUPABASE_DATABASE_URL=postgresql://postgres.your-project-ref:[YOUR_PASSWORD]@aws
 JWT_SECRET=meetpoint-local-jwt-secret-2026-example
 NEXT_PUBLIC_KAKAO_MAP_APP_KEY=1234567890abcdef1234567890abcdef
 KAKAO_LOCAL_REST_API_KEY=abcdef1234567890abcdef1234567890
+CRON_SECRET=meetpoint-local-cron-secret-example
 ```
 
 환경 변수 설명:
@@ -57,11 +58,12 @@ KAKAO_LOCAL_REST_API_KEY=abcdef1234567890abcdef1234567890
 *   `JWT_SECRET`: JWT 서명 및 검증에 사용하는 서버 전용 비밀 값
 *   `NEXT_PUBLIC_KAKAO_MAP_APP_KEY`: 브라우저에서 Kakao Map SDK를 로드할 때 사용하는 JavaScript 키
 *   `KAKAO_LOCAL_REST_API_KEY`: 서버에서 Kakao Local API를 호출할 때 사용하는 REST API 키
+*   `CRON_SECRET`: `/api/health/supabase` 운영 헬스체크 인증에 사용하는 서버 전용 비밀 값
 
 주의 사항:
 
 *   실제 비밀 값은 저장소에 커밋하지 마세요.
-*   `SUPABASE_SERVICE_ROLE_KEY`, `SUPABASE_DATABASE_URL`, `JWT_SECRET`, `KAKAO_LOCAL_REST_API_KEY`는 서버 전용으로 관리해야 합니다.
+*   `SUPABASE_SERVICE_ROLE_KEY`, `SUPABASE_DATABASE_URL`, `JWT_SECRET`, `KAKAO_LOCAL_REST_API_KEY`, `CRON_SECRET`는 서버 전용으로 관리해야 합니다.
 *   운영 환경과 로컬 환경은 별도 값으로 관리하는 것을 권장합니다.
 
 ### 3\. 개발 서버 실행
@@ -89,6 +91,7 @@ pnpm run test:kakao:sdk
 pnpm run test:kakao:local
 pnpm run test:supabase
 pnpm run test:supabase:schema
+pnpm run test:supabase:backfill-addresses
 pnpm run test:supabase:table
 pnpm run test:supabase:cleanup
 ```
@@ -155,6 +158,10 @@ scripts/
 *   운영 주소: https://meetpoint-iota.vercel.app/
 *   배포 문서: [09.배포 및 환경설정 문서](./doc/PRD/09.%EB%B0%B0%ED%8F%AC%20%EB%B0%8F%20%ED%99%98%EA%B2%BD%EC%84%A4%EC%A0%95%20%EB%AC%B8%EC%84%9C.md)
 *   세부 배포 가이드: [Vercel 배포 가이드](./doc/engineering/deployment/vercel.md)
+
+## License
+
+이 프로젝트는 [MIT License](./LICENSE)를 따릅니다.
 
 ## 참고
 
