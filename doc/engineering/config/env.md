@@ -15,6 +15,7 @@ MeetPoint에서는 환경 변수를 아래 원칙으로 관리한다.
 3.  local, preview, production 환경을 분리해서 관리한다.
 4.  실제 비밀 값은 문서에 적지 않고, 변수 이름과 용도만 문서화한다.
 5.  값이 누락되면 로그인, 지도, 추천 API, DB 처리 중 일부가 바로 실패할 수 있으므로 배포 전 확인이 필요하다.
+6.  운영 헬스체크를 사용한다면 CRON_SECRET 도 함께 관리해야 한다.
 
 가장 중요한 구분은 아래 한 줄이다.
 
@@ -161,6 +162,41 @@ production 은 실제 최종 배포 환경이다.
 2.  장소 후보 조회 실패
 3.  지도는 뜨는데 추천 결과가 비정상
 
+### 4.7 SUPABASE\_DATABASE\_URL
+
+역할:
+
+1.  Supabase PostgreSQL 직접 접속 또는 session pooler 접속
+2.  DB 점검 및 테스트 스크립트 실행
+
+특징:
+
+1.  서버 전용 값이다.
+2.  앱 화면 렌더링 자체의 최소 조건은 아니지만, 테스트 스크립트와 DB 점검에는 필요하다.
+3.  session pooler URL 과 direct URL 을 구분해 관리해야 한다.
+
+누락 시 증상:
+
+1.  test:supabase:table 같은 DB 스크립트 실행 실패
+2.  스키마 점검 또는 관리자성 DB 검증 실패
+
+### 4.8 CRON\_SECRET
+
+역할:
+
+1.  /api/health/supabase 인증 헤더 검증
+2.  Vercel cron 기반 운영 헬스체크 보호
+
+특징:
+
+1.  서버 전용 값이다.
+2.  Vercel cron 또는 수동 헬스체크 호출 시 Bearer 토큰으로 사용한다.
+
+누락 시 증상:
+
+1.  /api/health/supabase 가 503 으로 실패
+2.  Vercel cron 헬스체크가 정상 동작하지 않음
+
 ## 5\. 공개 가능 변수와 비공개 변수 구분
 
 공개 가능 변수:
@@ -174,6 +210,8 @@ production 은 실제 최종 배포 환경이다.
 1.  SUPABASE\_SERVICE\_ROLE\_KEY
 2.  JWT\_SECRET
 3.  KAKAO\_LOCAL\_REST\_API\_KEY
+4.  SUPABASE\_DATABASE\_URL
+5.  CRON\_SECRET
 
 쉽게 구분하면 다음과 같다.
 
@@ -191,7 +229,7 @@ production 은 실제 최종 배포 환경이다.
 로컬 개발에서는 보통 아래 흐름으로 설정한다.
 
 1.  프로젝트 루트에 로컬 환경 변수 파일을 준비한다.
-2.  위 필수 변수 6개를 모두 채운다.
+2.  앱 실행용 핵심 변수와 테스트용 추가 변수를 채운다.
 3.  개발 서버를 실행한다.
 4.  로그인, 지도, 추천 기능을 차례로 확인한다.
 
@@ -201,9 +239,11 @@ production 은 실제 최종 배포 환경이다.
 NEXT_PUBLIC_SUPABASE_URL=...
 NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=...
 SUPABASE_SERVICE_ROLE_KEY=...
+SUPABASE_DATABASE_URL=...
 JWT_SECRET=...
 NEXT_PUBLIC_KAKAO_MAP_APP_KEY=...
 KAKAO_LOCAL_REST_API_KEY=...
+CRON_SECRET=...
 ```
 
 바로 참고할 수 있도록 전체 .env 형식을 아래에 정리하면 다음과 같다.
@@ -212,9 +252,11 @@ KAKAO_LOCAL_REST_API_KEY=...
 NEXT_PUBLIC_SUPABASE_URL=https://sample-project.supabase.co
 NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=sb_publishable_sample-key-value
 SUPABASE_SERVICE_ROLE_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.sample-service-role-key-value
+SUPABASE_DATABASE_URL=postgresql://postgres.your-project-ref:[YOUR_PASSWORD]@aws-0-your-region.pooler.supabase.com:5432/postgres
 JWT_SECRET=meetpoint-local-jwt-secret-2026-example
 NEXT_PUBLIC_KAKAO_MAP_APP_KEY=1234567890abcdef1234567890abcdef
 KAKAO_LOCAL_REST_API_KEY=abcdef1234567890abcdef1234567890
+CRON_SECRET=meetpoint-local-cron-secret-example
 ```
 
 각 값은 아래처럼 이해하면 된다.
@@ -222,9 +264,11 @@ KAKAO_LOCAL_REST_API_KEY=abcdef1234567890abcdef1234567890
 1.  NEXT\_PUBLIC\_SUPABASE\_URL: Supabase 프로젝트 주소
 2.  NEXT\_PUBLIC\_SUPABASE\_PUBLISHABLE\_KEY: 브라우저에서 사용 가능한 공개용 Supabase 키
 3.  SUPABASE\_SERVICE\_ROLE\_KEY: 서버 전용 Supabase 관리자 키
-4.  JWT\_SECRET: JWT 서명과 검증에 쓰는 서버 전용 비밀 문자열
-5.  NEXT\_PUBLIC\_KAKAO\_MAP\_APP\_KEY: 브라우저에서 지도를 띄울 때 쓰는 Kakao JavaScript 키
-6.  KAKAO\_LOCAL\_REST\_API\_KEY: 서버에서 장소 검색에 쓰는 Kakao REST API 키
+4.  SUPABASE\_DATABASE\_URL: DB 테스트 스크립트나 직접 접속 점검에 쓰는 서버 전용 연결 문자열
+5.  JWT\_SECRET: JWT 서명과 검증에 쓰는 서버 전용 비밀 문자열
+6.  NEXT\_PUBLIC\_KAKAO\_MAP\_APP\_KEY: 브라우저에서 지도를 띄울 때 쓰는 Kakao JavaScript 키
+7.  KAKAO\_LOCAL\_REST\_API\_KEY: 서버에서 장소 검색에 쓰는 Kakao REST API 키
+8.  CRON\_SECRET: 운영 헬스체크 인증에 쓰는 서버 전용 비밀 값
 
 참고:
 
@@ -235,7 +279,7 @@ KAKAO_LOCAL_REST_API_KEY=abcdef1234567890abcdef1234567890
 
 1.  위 코드는 변수 구조를 보여 주기 위한 예시값이다.
 2.  실제 로컬 개발이나 실제 배포에서는 각 서비스에서 발급받은 실제 값으로 바꿔야 한다.
-3.  특히 SUPABASE\_SERVICE\_ROLE\_KEY 와 JWT\_SECRET 은 절대 공개 저장소에 올리면 안 된다.
+3.  특히 SUPABASE\_SERVICE\_ROLE\_KEY, SUPABASE\_DATABASE\_URL, JWT\_SECRET, CRON\_SECRET 은 절대 공개 저장소에 올리면 안 된다.
 
 주의:
 
@@ -314,7 +358,7 @@ SUPABASE_DATABASE_PASSWORD=your-postgres-password
 기본 순서는 아래와 같다.
 
 1.  Preview 와 Production 환경을 구분해서 변수 등록
-2.  필수 변수 6개를 모두 입력
+2.  앱 실행과 운영 검증에 필요한 변수를 모두 입력
 3.  저장 후 재배포 또는 새 배포 확인
 
 권장 방식:
@@ -328,6 +372,7 @@ SUPABASE_DATABASE_PASSWORD=your-postgres-password
 2.  KAKAO\_LOCAL\_REST\_API\_KEY 누락 여부
 3.  NEXT\_PUBLIC\_KAKAO\_MAP\_APP\_KEY 누락 여부
 4.  SUPABASE\_SERVICE\_ROLE\_KEY 를 공개 변수로 잘못 넣지 않았는지 확인
+5.  운영 헬스체크를 쓴다면 CRON\_SECRET 누락 여부 확인
 
 ## 8\. 누락 또는 오설정 시 증상
 
@@ -358,6 +403,11 @@ KAKAO\_LOCAL\_REST\_API\_KEY 문제:
 1.  추천 결과 비정상
 2.  장소 검색 실패
 3.  서버 로그에 외부 API 인증 실패 표시
+
+CRON\_SECRET 문제:
+
+1.  /api/health/supabase 가 503 으로 응답함
+2.  Vercel cron 헬스체크가 실패함
 
 ## 9\. 보안 주의 사항
 

@@ -82,8 +82,8 @@ MeetPoint MVP에서 JWT와 직접 관련 있는 위치는 아래와 같다.
 3.  logout: JWT 쿠키를 지운다.
 4.  login/page.tsx: 로그인 화면 진입점이며 성공 후 /friends 로 보낸다.
 5.  signup/page.tsx: 회원가입 화면 진입점이며 성공 후 /friends 로 보낸다.
-6.  friends/page.tsx: JWT가 없으면 public 화면으로 보낸다.
-7.  chat/page.tsx: JWT가 없으면 public 화면으로 보낸다.
+6.  friends/page.tsx: JWT가 없으면 /login 으로 보낸다.
+7.  chat/page.tsx: JWT가 없으면 /login 으로 보낸다.
 8.  session.ts: JWT 만들기, 검사하기, 쿠키 설정을 공통 처리한다.
 
 ---
@@ -138,7 +138,7 @@ MeetPoint MVP에서 JWT와 직접 관련 있는 위치는 아래와 같다.
   -> /friends 또는 /chat 접근
   -> 서버가 쿠키 확인
   -> JWT 유효: 페이지 렌더링
-  -> JWT 없음 또는 만료: / 또는 /login 으로 redirect
+  -> JWT 없음 또는 만료: /login 으로 redirect
 ```
 
 ---
