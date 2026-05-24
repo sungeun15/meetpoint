@@ -15,7 +15,7 @@
 3.  Preview, Production 환경 변수 설정
 4.  배포 후 인증, API, Kakao 연동 점검
 
-현재 기준 최종 통합 확인은 로컬 작업 폴더에서 진행하더라도, 실제 Vercel 배포는 그 안의 Git 저장소 루트 구조를 기준으로 잡아야 한다.
+현재 기준 최종 통합 확인은 로컬 작업 폴더에서 진행하더라도, 실제 Vercel 배포는 01_sungeun15 앱 폴더를 기준으로 잡아야 한다.
 
 ## 3\. 배포 대상 구조
 
@@ -23,7 +23,7 @@ workspace 안에서는 팀별로 로컬 작업 폴더가 나뉘어 있을 수 �
 
 하지만 이런 이름들은 협업을 위한 로컬 폴더 구분일 뿐이다.
 
-실제로 Vercel이 보는 배포 대상은 선택한 Git 저장소의 루트 구조이다. 현재 배포 기준 저장소 루트는 아래처럼 이해하면 된다.
+실제로 Vercel이 보는 배포 대상은 선택한 Git 저장소 안의 앱 루트이다. 현재 기준 앱 루트는 01_sungeun15 폴더이며, 그 안의 구조는 아래처럼 이해하면 된다.
 
 1.  app/
 2.  doc/
@@ -33,13 +33,13 @@ workspace 안에서는 팀별로 로컬 작업 폴더가 나뉘어 있을 수 �
 6.  pnpm-lock.yaml
 7.  tsconfig.json
 
-즉, Vercel 배포 기준에서는 로컬 작업 폴더명을 Root Directory 로 넣는 것이 아니라, 실제 Git 저장소 루트를 기준으로 잡아야 한다.
+즉, 현재 MeetPoint 워크스페이스에서는 Root Directory 를 01_sungeun15 로 지정해야 한다.
 
 정리하면 다음처럼 이해하면 된다.
 
 1.  workspace 기준 작업 폴더명: 로컬 협업용 구분 이름
 2.  실제 배포 대상: 해당 작업 폴더 내부의 Git 저장소 루트
-3.  Vercel에서 보는 앱 구조: app, public, package.json 이 바로 보이는 루트
+3.  Vercel에서 보는 앱 구조: 01_sungeun15 안에서 app, public, package.json 이 바로 보이는 루트
 
 ## 4\. 사전 준비 사항
 
@@ -73,9 +73,11 @@ CLI 배포도 가능하지만, MVP 운영 기준에서는 Git 연동 방식이 �
 1.  NEXT\_PUBLIC\_SUPABASE\_URL
 2.  NEXT\_PUBLIC\_SUPABASE\_PUBLISHABLE\_KEY
 3.  SUPABASE\_SERVICE\_ROLE\_KEY
-4.  JWT\_SECRET
-5.  NEXT\_PUBLIC\_KAKAO\_MAP\_APP\_KEY
-6.  KAKAO\_LOCAL\_REST\_API\_KEY
+4.  SUPABASE\_DATABASE\_URL
+5.  JWT\_SECRET
+6.  NEXT\_PUBLIC\_KAKAO\_MAP\_APP\_KEY
+7.  KAKAO\_LOCAL\_REST\_API\_KEY
+8.  CRON\_SECRET
 
 이 값이 하나라도 빠지면 인증, 위치 저장, Kakao 지도, 추천 API 중 일부가 바로 실패할 수 있다.
 
@@ -91,19 +93,19 @@ Framework Preset 은 Next.js 로 설정한다.
 
 가장 중요한 설정이다.
 
-현재 기준에서는 Root Directory 를 별도 하위 폴더로 잡지 않고, 연결한 Git 저장소의 루트를 그대로 사용하는 것이 맞다.
+현재 기준에서는 Root Directory 를 01_sungeun15 로 잡는 것이 맞다.
 
-즉, Vercel 화면에서 app, public, package.json 이 바로 보이는 위치가 Root Directory 기준이다.
+즉, Vercel 화면에서 01_sungeun15 폴더를 선택한 뒤 그 안에서 app, public, package.json 이 바로 보이는 위치가 Root Directory 기준이다.
 
 잘못해서 workspace 전체나 .my\_work 같은 상위 작업 폴더를 기준으로 잡으면 빌드가 실패하거나 엉뚱한 폴더가 배포될 수 있다.
 
-기본값:
+기준값:
 
 ```
-Root Directory = 저장소 루트
+Root Directory = 01_sungeun15
 ```
 
-보통은 Root Directory 를 비워 두거나 기본값으로 두면 된다.
+워크스페이스 전체 루트나 .my_work 상위 폴더를 배포 대상으로 잡으면 안 된다.
 
 ### 5.3 Install Command
 
@@ -151,9 +153,11 @@ Production 에는 실제 운영용 값을 넣는다.
 NEXT_PUBLIC_SUPABASE_URL
 NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY
 SUPABASE_SERVICE_ROLE_KEY
+SUPABASE_DATABASE_URL
 JWT_SECRET
 NEXT_PUBLIC_KAKAO_MAP_APP_KEY
 KAKAO_LOCAL_REST_API_KEY
+CRON_SECRET
 ```
 
 JWT\_SECRET 은 충분히 길고 예측하기 어려운 문자열을 사용한다.
@@ -185,9 +189,9 @@ JWT\_SECRET 은 충분히 길고 예측하기 어려운 문자열을 사용한�
 가장 쉬운 최초 배포 순서는 아래와 같다.
 
 1.  Vercel Dashboard 에서 New Project 를 누른다.
-2.  GitHub 저장소 sungeun15/meetpoint 를 선택한다.
+2.  GitHub에서 MeetPoint 저장소를 선택한다.
 3.  Framework Preset 이 Next.js 인지 확인한다.
-4.  Root Directory 가 저장소 루트인지 확인한다.
+4.  Root Directory 가 01_sungeun15 인지 확인한다.
 5.  Install Command 가 pnpm install 인지 확인한다.
 6.  Build Command 가 pnpm build 인지 확인한다.
 7.  환경 변수를 모두 입력한다.
@@ -267,7 +271,7 @@ Preview 배포에서는 아래를 먼저 본다.
 
 확인:
 
-1.  Root Directory 가 저장소 루트인지 확인
+1.  Root Directory 가 01_sungeun15 인지 확인
 2.  package.json 과 pnpm-lock.yaml 이 해당 디렉토리에 있는지 확인
 3.  Vercel 빌드 로그에서 실패 단계 확인
 
