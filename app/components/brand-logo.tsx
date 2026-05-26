@@ -16,7 +16,7 @@ export function BrandLogo({ className = "" }: BrandLogoProps) {
         <Link href="/" className={`flex items-center gap-[7px] text-black ${className}`.trim()}>
             <div className="relative size-[31px] shrink-0">
                 <Image
-                    src="/imports/Frame1-2/6bbd22ff4d1f77ee42786bef5cc5ea8b1b2a6028.png"
+                    src="/imports/Frame1-2/meetpoint-logo.png"
                     alt=""
                     fill
                     sizes="31px"
