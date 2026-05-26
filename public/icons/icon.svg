@@ -1,0 +1,17 @@
+<svg width="512" height="512" viewBox="0 0 512 512" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <rect width="512" height="512" rx="100" fill="url(#gradient)"/>
+  <g transform="translate(256, 256)">
+    <!-- Pin Icon -->
+    <g transform="translate(-90, -100) scale(6)">
+      <path d="M15 0C9.477 0 5 4.477 5 10C5 15.523 9.477 20 15 20C20.523 20 25 15.523 25 10C25 4.477 20.523 0 15 0ZM15 2C19.411 2 23 5.589 23 10C23 14.411 19.411 18 15 18C10.589 18 7 14.411 7 10C7 5.589 10.589 2 15 2Z" fill="white"/>
+      <circle cx="15" cy="10" r="4" fill="white"/>
+      <path d="M15 20L15 32" stroke="white" stroke-width="2.5" stroke-linecap="round"/>
+    </g>
+  </g>
+  <defs>
+    <linearGradient id="gradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#6675F7;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#57007B;stop-opacity:1" />
+    </linearGradient>
+  </defs>
+</svg>

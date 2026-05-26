@@ -145,6 +145,7 @@ scripts/
 *   [Vercel 배포 가이드](./doc/engineering/deployment/vercel.md)
 *   [Kakao Map 사용 가이드](./doc/engineering/external/01.kakao-map.md)
 *   [Kakao 테스트 스크립트 사용법](./doc/engineering/external/02.Kakao%20%ED%85%8C%EC%8A%A4%ED%8A%B8%20%EC%8A%A4%ED%81%AC%EB%A6%BD%ED%8A%B8%20%EC%82%AC%EC%9A%A9%EB%B2%95.md)
+*   [PWA 가이드](./doc/engineering/external/pwa/meetpoint-pwa-guide.md)
 
 ### Workflow
 
